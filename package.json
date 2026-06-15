@@ -1,0 +1,17 @@
+{
+	"name": "ai-codebase-rag-agent",
+	"private": true,
+	"version": "0.1.0",
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
+	"scripts": {
+		"dev": "npm run dev --workspace @aicodebase/backend",
+		"dev:backend": "npm run dev --workspace @aicodebase/backend",
+		"dev:backend:debug": "npm run dev:debug --workspace @aicodebase/backend",
+		"dev:frontend": "npm run dev --workspace @aicodebase/frontend",
+		"build": "npm run build --workspace @aicodebase/shared && npm run build --workspace @aicodebase/backend && npm run build --workspace @aicodebase/frontend",
+		"clean:data": "node scripts/clean-data.js"
+	}
+}

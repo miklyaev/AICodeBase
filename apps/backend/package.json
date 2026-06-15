@@ -1,0 +1,34 @@
+{
+	"name": "@aicodebase/backend",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"dev": "ts-node-dev --respawn --transpile-only src/main.ts",
+		"dev:debug": "ts-node-dev --respawn --transpile-only --inspect=9229 src/main.ts",
+		"build": "tsc -p tsconfig.json",
+		"start": "node dist/main.js"
+	},
+	"dependencies": {
+		"@aicodebase/shared": "0.1.0",
+		"@nestjs/common": "^10.4.8",
+		"@nestjs/core": "^10.4.8",
+		"@nestjs/platform-express": "^10.4.8",
+		"@nestjs/event-emitter": "^2.0.4",
+		"@lancedb/lancedb": "^0.21.1",
+		"better-sqlite3": "^11.7.0",
+		"chokidar": "^4.0.3",
+		"class-transformer": "^0.5.1",
+		"class-validator": "^0.14.1",
+		"cors": "^2.8.5",
+		"open": "^10.1.0",
+		"reflect-metadata": "^0.2.2",
+		"rxjs": "^7.8.1"
+	},
+	"devDependencies": {
+		"@types/better-sqlite3": "^7.6.12",
+		"@types/express": "^5.0.0",
+		"@types/node": "^22.10.2",
+		"ts-node-dev": "^2.0.0",
+		"typescript": "^5.6.3"
+	}
+}

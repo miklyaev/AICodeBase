@@ -1,0 +1,39 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Backend: Attach (9229)",
+			"type": "node",
+			"request": "attach",
+			"port": 9229,
+			"restart": true,
+			"skipFiles": [
+				"<node_internals>/**"
+			]
+		},
+		{
+			"name": "Backend: Start Debug + Attach",
+			"type": "node",
+			"request": "attach",
+			"port": 9229,
+			"restart": true,
+			"preLaunchTask": "dev:backend:debug",
+			"skipFiles": [
+				"<node_internals>/**"
+			]
+		},
+		{
+			"name": "Frontend: Dev Server",
+			"type": "node-terminal",
+			"request": "launch",
+			"command": "npm run dev:frontend"
+		},
+		{
+			"name": "Fullstack: Frontend + Backend Debug",
+			"type": "node-terminal",
+			"request": "launch",
+			"command": "npm run dev:frontend",
+			"preLaunchTask": "dev:backend:debug"
+		}
+	]
+}
