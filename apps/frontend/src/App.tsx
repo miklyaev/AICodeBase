@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import type * as Monaco from 'monaco-editor';
 import type { editor as MonacoEditor } from 'monaco-editor';
-import { api, API_BASE_URL } from './api';
+import { api, getApiUrl } from './api';
 import { ChatResponse, CodeReference, ProjectInfo, ProjectStatus } from './types';
 
 interface ChatMessage {
@@ -44,7 +44,6 @@ const toMonacoLanguage = (lang?: string) => {
 };
 
 export function App() {
-	const [apiKey, setApiKey] = useState('');
 	const [hasKey, setHasKey] = useState(false);
 	const [projectPath, setProjectPath] = useState('');
 	const [project, setProject] = useState<ProjectInfo | null>(null);
@@ -68,7 +67,7 @@ export function App() {
 	useEffect(() => {
 		if (!project?.id) return;
 
-		const source = new EventSource(`${API_BASE_URL}/api/projects/events?projectId=${encodeURIComponent(project.id)}`);
+		const source = new EventSource(getApiUrl(`/api/projects/events?projectId=${encodeURIComponent(project.id)}`));
 		source.onmessage = () => {
 			void refreshStatus(project.id);
 		};
@@ -121,17 +120,6 @@ export function App() {
 	async function refreshStatus(projectId: string) {
 		const next = await api.getProjectStatus(projectId);
 		setStatus(next);
-	}
-
-	async function saveApiKey() {
-		setError(null);
-		try {
-			await api.setOpenRouterKey(apiKey);
-			setHasKey(true);
-			setApiKey('');
-		} catch (e) {
-			setError((e as Error).message);
-		}
 	}
 
 	async function pickProjectFolder() {
@@ -232,7 +220,7 @@ export function App() {
 						<input value={projectPath} onChange={(e) => setProjectPath(e.target.value)} placeholder="D:\\Projects\\my-app" />
 					</label>
 					<div className="row">
-						<button className="ghost" onClick={pickProjectFolder}>
+						<button type="button" className="ghost" onClick={pickProjectFolder}>
 							Выбрать через диалог
 						</button>
 						<button onClick={selectProject} disabled={!projectPath.trim()}>
@@ -259,20 +247,6 @@ export function App() {
 						<div className="progress" style={{ width: `${progress}%` }} />
 					</div>
 					<div className="muted small">{status?.message ?? 'Ожидание индексации'}</div>
-				</section>
-
-				<section className="card">
-					<h2>OpenRouter API key</h2>
-					<label>
-						Ключ
-						<input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="sk-or-..." />
-					</label>
-					<div className="row">
-						<button onClick={saveApiKey} disabled={!apiKey.trim()}>
-							Сохранить в сессии
-						</button>
-						<span className={hasKey ? 'ok' : 'warn'}>{hasKey ? 'Ключ задан' : 'Ключ не задан'}</span>
-					</div>
 				</section>
 
 				<section className="card chat-card">

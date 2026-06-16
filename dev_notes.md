@@ -4,6 +4,26 @@
 
 ## Журнал изменений
 
+### 2026-06-15 — Рефакторинг управления API Key
+
+**Область:** Architecture | Backend | Frontend
+
+**Что изменилось:**
+- Перенос хранения OpenRouter API Key из сессии (runtime memory) в переменные окружения (`.env`).
+- Удалена форма ввода API Key на фронтенде для предотвращения CORS-ошибок и повышения безопасности.
+- В `SettingsService` добавлена поддержка инициализации ключа из `process.env.OPENROUTER_API_KEY`.
+- Установлена зависимость `dotenv` в backend.
+
+**Затронутые пути:**
+- `apps/backend/package.json`
+- `apps/backend/src/services/settings.service.ts`
+- `apps/frontend/src/App.tsx`
+- `README.md`
+
+**Зачем / контекст:**
+- Устранение CORS-ошибок при попытке сохранения ключа через API.
+- Упрощение конфигурации приложения перед запуском.
+
 ### 2026-06-15 — MVP AI RAG code-agent (frontend + backend)
 
 **Область:** Architecture | Backend | Frontend | Infra

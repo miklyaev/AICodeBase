@@ -1,9 +1,19 @@
 import { ChatResponse, CodeReference, ProjectInfo, ProjectStatus } from './types';
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? 'http://127.0.0.1:3001' : '');
+// Normalize VITE_API_BASE_URL: remove surrounding quotes if present, fallback to empty string
+function normalizeEnvUrl(value: unknown): string {
+	if (typeof value !== 'string' || !value) return '';
+	return value.replace(/^\s*['"](.*)['"]\s*$/, '$1');
+}
+
+const API_ORIGIN = normalizeEnvUrl(import.meta.env.VITE_API_BASE_URL) ?? '';
+
+export function getApiUrl(path: string) {
+	return `${API_ORIGIN}${path}`;
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-	const response = await fetch(`${API_BASE_URL}${path}`, {
+	const response = await fetch(getApiUrl(path), {
 		headers: { 'Content-Type': 'application/json' },
 		...init,
 	});
@@ -21,12 +31,14 @@ export const api = {
 	setOpenRouterKey: (apiKey: string) =>
 		request<{ success: boolean }>('/api/settings/openrouter-key', {
 			method: 'POST',
-			body: JSON.stringify({ apiKey, remember: false }),
-		}),
-	pickProjectFolder: () =>
-		request<{ path: string | null }>('/api/projects/pick-folder', {
-			method: 'POST',
-		}),
+			body: JSON.stringify({
+				apiKey: typeof apiKey === 'object' ? (apiKey as any).apiKey : apiKey,
+				remember: false,
+			}),
+		}), pickProjectFolder: () =>
+			request<{ path: string | null }>('/api/projects/pick-folder', {
+				method: 'POST',
+			}),
 	selectProject: (path: string) =>
 		request<ProjectInfo>('/api/projects/select', {
 			method: 'POST',

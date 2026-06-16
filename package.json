@@ -13,5 +13,8 @@
 		"dev:frontend": "npm run dev --workspace @aicodebase/frontend",
 		"build": "npm run build --workspace @aicodebase/shared && npm run build --workspace @aicodebase/backend && npm run build --workspace @aicodebase/frontend",
 		"clean:data": "node scripts/clean-data.js"
+	},
+	"dependencies": {
+		"dotenv": "^17.4.2"
 	}
 }

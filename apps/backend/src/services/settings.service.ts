@@ -1,8 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 @Injectable()
 export class SettingsService {
-	private openRouterKey: string | null = null;
+	private openRouterKey: string | null = process.env.OPENROUTER_API_KEY || null;
 
 	setOpenRouterKey(key: string) {
 		const normalized = key.trim();
