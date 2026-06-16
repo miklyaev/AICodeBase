@@ -1,7 +1,8 @@
 /.kodik
 /backend/node_modules/
 # backend env files
-/backend/.env
+/apps/backend/.env
+/apps/frontend/.env
 
 # dependencies
 /node_modules
