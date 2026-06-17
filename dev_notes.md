@@ -4,6 +4,27 @@
 
 ## Журнал изменений
 
+### 2026-06-17 — Исправление ошибки типов в LanceDB
+
+**Область:** Backend | Infra
+
+**Что изменилось:**
+- Исправлена ошибка `TypeError: Cannot read properties of undefined (reading 'map')` в `OpenRouterService.createEmbeddings()`
+- Добавлена проверка `result.data` перед вызовом `.map()` в методе `createEmbeddings`
+- Добавлена проверка `embeddings[index]` на массив в `IndexingService`
+- Добавлена защита от `undefined` в векторах при создании чанков
+- Обновлена документация с описанием изменений
+
+**Затронутые пути:**
+- `apps/backend/src/services/openrouter.service.ts`
+- `apps/backend/src/services/indexing.service.ts`
+- `dev_notes.md`
+- `README.md`
+
+**Зачем / контекст:**
+- Устранение ошибки, возникающей при индексации, когда embeddings API возвращал неожиданную структуру данных
+- Повышение устойчивости системы к некорректным ответам от OpenRouter API
+
 ### 2026-06-15 — Рефакторинг управления API Key
 
 **Область:** Architecture | Backend | Frontend
@@ -30,7 +51,7 @@
 
 **Что изменилось:**
 - Создана monorepo-структура: `apps/frontend`, `apps/backend`, `packages/shared`.
-- Реализован NestJS backend с endpoint’ами настроек, выбора проекта, индексации, статуса, retrieval, chat и выдачи сниппета.
+- Реализован NestJS backend с endpoint'ами настроек, выбора проекта, индексации, статуса, retrieval, chat и выдачи сниппета.
 - Добавлен локальный SQLite storage (`projects/files/chunks/conversations/messages`), сканер файлов с ignore/security-правилами, chunking и инкрементальная переиндексация по hash.
 - Добавлена OpenRouter-интеграция (embeddings + chat completion) с timeout/retry и безопасной обработкой ошибок.
 - Реализован SSE-поток событий прогресса индексации.

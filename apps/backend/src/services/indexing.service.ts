@@ -64,9 +64,9 @@ export class IndexingService {
 
 			const content = fs.readFileSync(file.absolutePath, 'utf-8');
 			const chunkUnits = chunkText(content);
-			const embeddings = chunkUnits.length
+			const embeddings = (chunkUnits.length
 				? await this.openRouterService.createEmbeddings(chunkUnits.map((chunk) => chunk.content))
-				: [];
+				: []) ?? [];
 			const fileId = existing?.id ?? makeId();
 			const lanceRows: LanceChunkRow[] = [];
 
@@ -110,7 +110,7 @@ export class IndexingService {
 
 				chunkUnits.forEach((chunk, index) => {
 					const chunkId = makeId();
-					const vector = embeddings[index] ?? [];
+					const vector = (embeddings[index] && Array.isArray(embeddings[index])) ? embeddings[index] : [];
 					this.db.run(
 						`INSERT INTO chunks (id, projectId, fileId, relativePath, chunkIndex, startLine, endLine, language, symbolName, content, embedding)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,

@@ -59,13 +59,27 @@ export class OpenRouterService {
 	}
 
 	async createEmbeddings(inputs: string[]) {
+		if (!inputs || inputs.length === 0) {
+			return [];
+		}
+
 		const payload = {
 			model: this.embeddingModel,
 			input: inputs,
 		};
 
-		const result = await this.request<{ data: Array<{ embedding: number[] }> }>('/embeddings', payload);
-		return result.data.map((item) => item.embedding);
+		const result = await this.request<{ data?: Array<{ embedding: number[] }> }>('/embeddings', payload);
+
+		if (!result?.data || !Array.isArray(result.data)) {
+			return [];
+		}
+
+		return result.data.map((item) => {
+			if (!item?.embedding || !Array.isArray(item.embedding)) {
+				return [];
+			}
+			return item.embedding;
+		});
 	}
 
 	async createChatCompletion(context: string, message: string) {

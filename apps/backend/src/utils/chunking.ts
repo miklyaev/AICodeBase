@@ -3,7 +3,7 @@ export interface ChunkUnit {
 	startLine: number;
 	endLine: number;
 	content: string;
-	symbolName: string | null;
+	symbolName: string;
 }
 
 const detectSymbol = (line: string): string | null => {
@@ -47,7 +47,7 @@ export function chunkText(content: string, maxLines = 80, overlap = 15): ChunkUn
 			startLine: start + 1,
 			endLine: end,
 			content: part.join('\n'),
-			symbolName: symbol,
+			symbolName: symbol ?? '',
 		});
 
 		if (end >= lines.length) break;

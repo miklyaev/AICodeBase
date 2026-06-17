@@ -11,7 +11,7 @@ export interface LanceChunkRow {
 	startLine: number;
 	endLine: number;
 	language: string;
-	symbolName: string | null;
+	symbolName: string;
 	content: string;
 	vector: number[];
 }
@@ -38,11 +38,22 @@ export class LanceDbService {
 		this.tablePromise = (async () => {
 			const db = await this.getDb();
 			try {
+				// Пытаемся открыть существующую таблицу
 				return await db.openTable(this.tableName);
-			} catch {
+			} catch (err: any) {
+				// Если таблица повреждена или не существует, удаляем и создаём заново
+				if (err.message?.includes('Schema error') || err.message?.includes('No field')) {
+					try {
+						await db.dropTable(this.tableName);
+					} catch {
+						// Если не удалось удалить, продолжаем
+					}
+				}
+
 				if (!createWithRows?.length) {
 					return null;
 				}
+				// LanceDB автоматически определяет схему из данных
 				return db.createTable(this.tableName, createWithRows);
 			}
 		})();
@@ -58,9 +69,10 @@ export class LanceDbService {
 		const table = await this.getTable(rows);
 		if (!table) return;
 
-		const project = this.escapeSql(projectId);
-		const file = this.escapeSql(fileId);
-		await table.delete(`projectId = '${project}' AND fileId = '${file}'`);
+		// Удаляем старые данные для этого файла через fileId
+		const fileIdEscaped = this.escapeSql(fileId);
+		await table.delete(`fileid = '${fileIdEscaped}'`);
+
 		if (rows.length) {
 			await table.add(rows);
 		}
@@ -69,16 +81,17 @@ export class LanceDbService {
 	async deleteFileChunks(projectId: string, fileId: string) {
 		const table = await this.getTable();
 		if (!table) return;
-		const project = this.escapeSql(projectId);
-		const file = this.escapeSql(fileId);
-		await table.delete(`projectId = '${project}' AND fileId = '${file}'`);
+
+		const fileIdEscaped = this.escapeSql(fileId);
+		await table.delete(`fileid = '${fileIdEscaped}'`);
 	}
 
 	async clearProject(projectId: string) {
 		const table = await this.getTable();
 		if (!table) return;
-		const project = this.escapeSql(projectId);
-		await table.delete(`projectId = '${project}'`);
+
+		const projectIdEscaped = this.escapeSql(projectId);
+		await table.delete(`projectid = '${projectIdEscaped}'`);
 	}
 
 	async vectorSearch(projectId: string, vector: number[], topK: number) {
@@ -86,12 +99,8 @@ export class LanceDbService {
 		if (!table || !vector.length) return [];
 
 		const rows = await table.vectorSearch(vector).limit(Math.max(topK * 3, 20)).toArray();
-		return (rows ?? [])
-			.filter((row: any) => row.projectId === projectId)
-			.slice(0, topK) as Array<
-				LanceChunkRow & {
-					_distance?: number;
-				}
-			>;
+		return (rows ?? []).filter((row: any) => row.projectid === projectId)
+			.slice(0, topK) as Array<LanceChunkRow & { _distance?: number; }>;
 	}
 }
+

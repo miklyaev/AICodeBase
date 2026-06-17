@@ -82,3 +82,23 @@ npm run build
 - `GET /api/search`
 - `POST /api/chat/message`
 - `GET /api/files/snippet`
+
+## Известные проблемы и исправления
+
+### 2026-06-17 — Ошибка типов при индексации
+
+**Ошибка:** `TypeError: Cannot read properties of undefined (reading 'map')`
+
+**Описание:** Ошибка возникала в `OpenRouterService.createEmbeddings()` при попытке вызвать `.map()` на `undefined`, если API возвращал неожиданную структуру данных.
+
+**Решение:**
+- Добавлена проверка `result.data` перед вызовом `.map()` в методе `createEmbeddings`
+- Добавлена проверка `embeddings[index]` на массив в `IndexingService`
+- Добавлена защита от `undefined` в векторах при создании чанков
+- Обновлена документация с описанием изменений
+
+**Затронутые файлы:**
+- `apps/backend/src/services/openrouter.service.ts`
+- `apps/backend/src/services/indexing.service.ts`
+
+**Последствия:** Повышена устойчивость системы к некорректным ответам от OpenRouter API.
