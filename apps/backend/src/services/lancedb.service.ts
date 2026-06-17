@@ -70,8 +70,9 @@ export class LanceDbService {
 		if (!table) return;
 
 		// Удаляем старые данные для этого файла через fileId
+		// Используем двойные кавычки для имен колонок, чтобы избежать приведения к нижнему регистру
 		const fileIdEscaped = this.escapeSql(fileId);
-		await table.delete(`fileid = '${fileIdEscaped}'`);
+		await table.delete(`"fileId" = '${fileIdEscaped}'`);
 
 		if (rows.length) {
 			await table.add(rows);
@@ -83,7 +84,7 @@ export class LanceDbService {
 		if (!table) return;
 
 		const fileIdEscaped = this.escapeSql(fileId);
-		await table.delete(`fileid = '${fileIdEscaped}'`);
+		await table.delete(`"fileId" = '${fileIdEscaped}'`);
 	}
 
 	async clearProject(projectId: string) {
@@ -91,7 +92,7 @@ export class LanceDbService {
 		if (!table) return;
 
 		const projectIdEscaped = this.escapeSql(projectId);
-		await table.delete(`projectid = '${projectIdEscaped}'`);
+		await table.delete(`"projectId" = '${projectIdEscaped}'`);
 	}
 
 	async vectorSearch(projectId: string, vector: number[], topK: number) {
@@ -99,8 +100,8 @@ export class LanceDbService {
 		if (!table || !vector.length) return [];
 
 		const rows = await table.vectorSearch(vector).limit(Math.max(topK * 3, 20)).toArray();
-		return (rows ?? []).filter((row: any) => row.projectid === projectId)
+		// В LanceDB 0.33+ имена полей в возвращаемых объектах соответствуют схеме (camelCase)
+		return (rows ?? []).filter((row: any) => row.projectId === projectId)
 			.slice(0, topK) as Array<LanceChunkRow & { _distance?: number; }>;
 	}
 }
-

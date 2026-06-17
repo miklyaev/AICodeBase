@@ -34,17 +34,21 @@ export class OpenRouterService {
 
 				if (response.status >= 500 || response.status === 429) {
 					lastError = await response.text();
+					console.error(`[OpenRouter] Attempt ${attempt + 1} failed (${response.status}): ${lastError}`);
 					await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
 					continue;
 				}
 
+				const errorText = await response.text();
+				console.error(`[OpenRouter] Request failed (${response.status}): ${errorText}`);
 				throw new ServiceUnavailableException({
 					code: 'OPENROUTER_REQUEST_FAILED',
 					message: 'Ошибка OpenRouter',
-					details: await response.text(),
+					details: errorText,
 				});
 			} catch (error) {
 				lastError = error;
+				console.error(`[OpenRouter] Network/Timeout error:`, error);
 				await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
 			} finally {
 				clearTimeout(timer);
