@@ -45,8 +45,9 @@ const toMonacoLanguage = (lang?: string) => {
 
 export function App() {
 	const [hasKey, setHasKey] = useState(false);
-	const [projectPath, setProjectPath] = useState('');
-	const [project, setProject] = useState<ProjectInfo | null>(null);
+	const [sessionKey, setSessionKey] = useState('');
+	const [showKey, setShowKey] = useState(false);
+	const [projectPath, setProjectPath] = useState(''); const [project, setProject] = useState<ProjectInfo | null>(null);
 	const [status, setStatus] = useState<ProjectStatus | null>(null);
 	const [chatInput, setChatInput] = useState('');
 	const [chat, setChat] = useState<ChatMessage[]>([]);
@@ -205,6 +206,11 @@ export function App() {
 
 	const progress = status?.totalFiles ? Math.round((status.indexedFiles / status.totalFiles) * 100) : 0;
 
+	const handleSessionKeyChange = (val: string) => {
+		setSessionKey(val);
+		api.setSessionKey(val);
+	};
+
 	return (
 		<div className="app-root">
 			<aside className="left-panel">
@@ -214,22 +220,57 @@ export function App() {
 				</header>
 
 				<section className="card">
+					<h2>Настройки API</h2>
+					<div className="row" style={{ alignItems: 'flex-end' }}>
+						<label style={{ flex: 1 }}>
+							OpenRouter API Key (Session)
+							<div style={{ position: 'relative', width: '100%' }}>
+								<input
+									type={showKey ? 'text' : 'password'}
+									value={sessionKey}
+									onChange={(e) => handleSessionKeyChange(e.target.value)}
+									placeholder="sk-or-v1-..."
+									style={{ paddingRight: '60px', width: '100%', boxSizing: 'border-box' }}
+								/>
+								<button
+									type="button"
+									className="ghost"
+									onClick={() => setShowKey(!showKey)}
+									style={{
+										position: 'absolute',
+										right: '5px',
+										top: '50%',
+										transform: 'translateY(-50%)',
+										padding: '4px 8px',
+										fontSize: '12px',
+										height: 'auto',
+										margin: 0
+									}}
+								>
+									{showKey ? 'Hide' : 'Show'}
+								</button>
+							</div>
+						</label>					</div>
+					{!hasKey && !sessionKey && (
+						<p className="error small">Ключ не установлен. Введите ключ для работы.</p>
+					)}
+				</section>
+
+				<section className="card">
 					<h2>Проект</h2>
 					<label>
-						Путь к папке проекта
+						Путь к папке проекта (выбрать через диалог для Windows)
 						<input value={projectPath} onChange={(e) => setProjectPath(e.target.value)} placeholder="D:\\Projects\\my-app" />
-					</label>
-					<div className="row">
+					</label>					<div className="row">
 						<button type="button" className="ghost" onClick={pickProjectFolder}>
 							Выбрать через диалог
 						</button>
 						<button onClick={selectProject} disabled={!projectPath.trim()}>
 							Выбрать папку проекта
 						</button>
-						<button onClick={startIndexing} disabled={!project || !hasKey}>
+						<button onClick={startIndexing} disabled={!project || (!hasKey && !sessionKey)}>
 							Индексировать
-						</button>
-						<button className="ghost" onClick={clearIndex} disabled={!project}>
+						</button>						<button className="ghost" onClick={clearIndex} disabled={!project}>
 							Очистить индекс
 						</button>
 					</div>
@@ -273,13 +314,26 @@ export function App() {
 							value={chatInput}
 							onChange={(e) => setChatInput(e.target.value)}
 							placeholder="Например: Где реализована авторизация пользователя?"
-							disabled={!project || !hasKey || busy}
+							disabled={!project || (!hasKey && !sessionKey) || busy}
 						/>
-						<button type="submit" disabled={!project || !hasKey || busy || !chatInput.trim()}>
-							Отправить
+						<button
+							type="submit"
+							disabled={!project || (!hasKey && !sessionKey) || busy || !chatInput.trim()}
+							style={{
+								padding: '4px 12px',
+								minWidth: 'auto',
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center'
+							}}
+							title="Отправить"
+						>
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+								<line x1="22" y1="2" x2="11" y2="13"></line>
+								<polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+							</svg>
 						</button>
-					</form>
-				</section>
+					</form>				</section>
 
 				{error ? <div className="error">{error}</div> : null}
 			</aside>

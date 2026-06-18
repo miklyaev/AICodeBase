@@ -9,8 +9,8 @@ export class OpenRouterService {
 
 	constructor(private readonly settingsService: SettingsService) { }
 
-	private async request<T>(endpoint: string, body: unknown, timeoutMs = 30_000): Promise<T> {
-		const key = this.settingsService.getOpenRouterKeyOrThrow();
+	private async request<T>(endpoint: string, body: unknown, apiKey?: string, timeoutMs = 30_000): Promise<T> {
+		const key = apiKey || this.settingsService.getOpenRouterKeyOrThrow();
 		let lastError: unknown;
 
 		for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -27,7 +27,6 @@ export class OpenRouterService {
 					body: JSON.stringify(body),
 					signal: controller.signal,
 				});
-
 				if (response.ok) {
 					return (await response.json()) as T;
 				}
@@ -62,7 +61,7 @@ export class OpenRouterService {
 		});
 	}
 
-	async createEmbeddings(inputs: string[]) {
+	async createEmbeddings(inputs: string[], apiKey?: string) {
 		if (!inputs || inputs.length === 0) {
 			return [];
 		}
@@ -72,7 +71,7 @@ export class OpenRouterService {
 			input: inputs,
 		};
 
-		const result = await this.request<{ data?: Array<{ embedding: number[] }> }>('/embeddings', payload);
+		const result = await this.request<{ data?: Array<{ embedding: number[] }> }>('/embeddings', payload, apiKey);
 
 		if (!result?.data || !Array.isArray(result.data)) {
 			return [];
@@ -86,7 +85,7 @@ export class OpenRouterService {
 		});
 	}
 
-	async createChatCompletion(context: string, message: string) {
+	async createChatCompletion(context: string, message: string, apiKey?: string) {
 		const systemPrompt =
 			'Ты агент поиска по коду. Используй только предоставленный контекст. Не выдумывай файлы или строки. Если уверенность низкая, явно укажи это.';
 
@@ -99,7 +98,7 @@ export class OpenRouterService {
 			],
 		};
 
-		const result = await this.request<{ choices: Array<{ message: { content: string } }> }>('/chat/completions', payload, 45_000);
+		const result = await this.request<{ choices: Array<{ message: { content: string } }> }>('/chat/completions', payload, apiKey, 45_000);
 		return result.choices[0]?.message?.content ?? '';
 	}
 }

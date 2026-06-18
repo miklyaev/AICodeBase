@@ -23,11 +23,10 @@ export class SearchService {
 		private readonly lanceDbService: LanceDbService,
 	) { }
 
-	async search(projectId: string, query: string, topK = 8): Promise<CodeReference[]> {
+	async search(projectId: string, query: string, topK = 8, apiKey?: string): Promise<CodeReference[]> {
 		this.projectsService.getProjectById(projectId);
 		const lowered = query.toLowerCase();
-		const queryVector = (await this.openRouterService.createEmbeddings([query]))[0] ?? [];
-
+		const queryVector = (await this.openRouterService.createEmbeddings([query], apiKey))[0] ?? [];
 		const vectorRows = await this.lanceDbService.vectorSearch(projectId, queryVector, topK);
 		const keywordRows = this.db.all<KeywordChunkRow>(
 			`SELECT relativePath, startLine, endLine, language, symbolName, content

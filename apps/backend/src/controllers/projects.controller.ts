@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Sse } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Sse, Headers } from '@nestjs/common';
 import { map } from 'rxjs/operators';
 import { SelectProjectDto, IndexProjectDto } from '../dto/projects.dto';
 import { ProjectsService } from '../services/projects.service';
@@ -24,11 +24,13 @@ export class ProjectsController {
 	}
 
 	@Post('/index')
-	async indexProject(@Body() dto: IndexProjectDto) {
-		void this.indexingService.indexProject(dto.projectId);
+	async indexProject(
+		@Body() dto: IndexProjectDto,
+		@Headers('x-openrouter-key') apiKey?: string
+	) {
+		void this.indexingService.indexProject(dto.projectId, apiKey);
 		return { started: true };
 	}
-
 	@Post('/clear-index')
 	async clearIndex(@Body() dto: IndexProjectDto) {
 		await this.projectsService.clearProjectIndex(dto.projectId);

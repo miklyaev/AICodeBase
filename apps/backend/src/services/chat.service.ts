@@ -15,7 +15,7 @@ export class ChatService {
 		private readonly projectsService: ProjectsService,
 	) { }
 
-	async sendMessage(projectId: string, message: string, conversationId?: string): Promise<ChatResponse> {
+	async sendMessage(projectId: string, message: string, conversationId?: string, apiKey?: string): Promise<ChatResponse> {
 		const project = this.projectsService.getProjectById(projectId);
 		if (project.status !== 'ready' && project.status !== 'indexing') {
 			throw new BadRequestException({
@@ -24,8 +24,7 @@ export class ChatService {
 			});
 		}
 
-		const references = await this.searchService.search(projectId, message, 8);
-		const actualConversationId = this.ensureConversation(projectId, conversationId);
+		const references = await this.searchService.search(projectId, message, 8, apiKey); const actualConversationId = this.ensureConversation(projectId, conversationId);
 
 		this.db.run(
 			'INSERT INTO messages (id, conversationId, role, content, createdAt) VALUES (?, ?, ?, ?, ?)',
@@ -42,9 +41,8 @@ export class ChatService {
 		let confidence: 'high' | 'medium' | 'low' = references.length >= 3 ? 'high' : references.length > 0 ? 'medium' : 'low';
 
 		try {
-			const raw = await this.openRouterService.createChatCompletion(context, message);
-			const parsed = JSON.parse(raw) as Partial<ChatResponse>;
-			if (parsed.answer && typeof parsed.answer === 'string') answer = parsed.answer;
+			const raw = await this.openRouterService.createChatCompletion(context, message, apiKey);
+			const parsed = JSON.parse(raw) as Partial<ChatResponse>; if (parsed.answer && typeof parsed.answer === 'string') answer = parsed.answer;
 			if (parsed.confidence === 'high' || parsed.confidence === 'medium' || parsed.confidence === 'low') {
 				confidence = parsed.confidence;
 			}

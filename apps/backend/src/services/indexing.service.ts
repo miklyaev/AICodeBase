@@ -35,7 +35,7 @@ export class IndexingService {
 		return this.progress.get(projectId) ?? { indexedFiles: 0, totalFiles: 0 };
 	}
 
-	async indexProject(projectId: string) {
+	async indexProject(projectId: string, apiKey?: string) {
 		const project = this.projectsService.getProjectById(projectId);
 		this.projectsService.setProjectStatus(projectId, 'indexing');
 
@@ -65,9 +65,8 @@ export class IndexingService {
 			const content = fs.readFileSync(file.absolutePath, 'utf-8');
 			const chunkUnits = chunkText(content);
 			const embeddings = (chunkUnits.length
-				? await this.openRouterService.createEmbeddings(chunkUnits.map((chunk) => chunk.content))
-				: []) ?? [];
-			const fileId = existing?.id ?? makeId();
+				? await this.openRouterService.createEmbeddings(chunkUnits.map((chunk) => chunk.content), apiKey)
+				: []) ?? []; const fileId = existing?.id ?? makeId();
 			const lanceRows: LanceChunkRow[] = [];
 
 			this.db.transaction(() => {
