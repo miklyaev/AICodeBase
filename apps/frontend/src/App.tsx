@@ -216,9 +216,8 @@ export function App() {
 			<aside className="left-panel">
 				<header className="card">
 					<h1>AI Codebase RAG Agent</h1>
-					<p className="muted">Backend: 127.0.0.1:3001</p>
+					<p className="muted">Помогает исследовать исходный код проектов</p>
 				</header>
-
 				<section className="card">
 					<h2>Настройки API</h2>
 					<div className="row" style={{ alignItems: 'flex-end' }}>
