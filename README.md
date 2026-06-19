@@ -1,104 +1,55 @@
-# AICodeBase
+# AI CodeBase Agent (RAG)
 
-Локальное MVP-приложение для RAG-поиска по кодовой базе:
+Интеллектуальная система для анализа локальных кодовых баз с использованием RAG (Retrieval-Augmented Generation).
 
-- `apps/backend` — NestJS API (сканирование, индексация, retrieval, chat, системный выбор папки);
-- `apps/frontend` — React + Vite UI (layout 40/60, чат, Monaco viewer и просмотр кода);
-- `packages/shared` — общие типы;
-- `data/` — локальные runtime-данные (SQLite/индекс), в git не коммитятся.
+## Архитектура
 
-## Требования
+Проект построен по принципу монорепозитория:
+- **`apps/backend`**: NestJS приложение. Отвечает за индексацию кода, хранение векторов в LanceDB, метаданных в SQLite и взаимодействие с LLM через OpenRouter.
+- **`apps/frontend`**: React приложение (Vite). Интерфейс в стиле Windows 11 с интеграцией Monaco Editor.
+- **`packages/shared`**: Общие типы и утилиты.
 
-- Node.js 20+
-- npm 10+
+## Настройка API-ключа
 
-## Установка
+Для работы системы требуется ключ **OpenRouter API**. Существует два способа его настройки:
 
+1.  **Через переменные окружения (рекомендуется)**:
+    Создайте файл `.env` в `apps/backend/` и добавьте:
+    ```env
+    OPENROUTER_API_KEY=your_key_here
+    ```
+2.  **Через интерфейс (Session-based)**:
+    На главной форме приложения в блоке "Настройки API" можно ввести ключ вручную. 
+    *Примечание: Ключ, введенный через интерфейс, сохраняется только на время работы текущей сессии бэкенда.*
+
+## Запуск проекта
+
+### Предварительные требования
+- Node.js (v18+)
+- npm / yarn
+
+### Установка зависимостей
 ```bash
 npm install
 ```
 
-## Запуск в разработке
-
-Запуск backend (порт `3001`, только localhost):
-
+### Запуск в режиме разработки
 ```bash
+# Запуск всех сервисов одновременно
+npm run dev
+
+# Или запуск по отдельности из корня:
 npm run dev:backend
-```
-
-Запуск frontend (порт `5173`):
-
-```bash
 npm run dev:frontend
 ```
 
-Открой в браузере `http://127.0.0.1:5173`.
+Или вручную в каждой папке:
+- Бэкенд: `cd apps/backend && npm run dev`
+- Фронтенд: `cd apps/frontend && npm run dev`
 
-## Настройка OpenRouter API key
 
-1. Создайте файл `.env` в директории `apps/backend/`.
-2. Добавьте в него ваш ключ: `OPENROUTER_API_KEY=ваш_ключ`.
-3. Перезапустите backend. Ключ будет автоматически подхвачен из переменных окружения.
-
-## Базовый flow
-
-1. Введи путь к папке проекта.
-2. Нажми **Выбрать через диалог** (Windows) или укажи путь вручную.
-3. Нажми **Выбрать папку проекта**.
-4. Нажми **Индексировать**.
-5. После статуса `ready` отправляй вопросы в чат.
-6. Кликабельные ссылки в сообщениях открывают соответствующие фрагменты кода справа (Monaco с подсветкой диапазона строк).
-
-## Очистка локального индекса
-
-```bash
-npm run clean:data
-```
-
-Также можно очистить индекс выбранного проекта из UI кнопкой **Очистить индекс**.
-
-## Production build
-
-```bash
-npm run build
-```
-
-Сборка проходит для всех пакетов:
-
-- `@aicodebase/shared`
-- `@aicodebase/backend`
-- `@aicodebase/frontend`
-
-## Реализованные API endpoints (MVP)
-
-- `POST /api/settings/openrouter-key`
-- `GET /api/settings/status`
-- `POST /api/projects/pick-folder`
-- `POST /api/projects/select`
-- `POST /api/projects/index`
-- `POST /api/projects/clear-index`
-- `GET /api/projects/:projectId/status`
-- `GET /api/projects/events?projectId=...` (SSE)
-- `GET /api/search`
-- `POST /api/chat/message`
-- `GET /api/files/snippet`
-
-## Известные проблемы и исправления
-
-### 2026-06-17 — Ошибка типов при индексации
-
-**Ошибка:** `TypeError: Cannot read properties of undefined (reading 'map')`
-
-**Описание:** Ошибка возникала в `OpenRouterService.createEmbeddings()` при попытке вызвать `.map()` на `undefined`, если API возвращал неожиданную структуру данных.
-
-**Решение:**
-- Добавлена проверка `result.data` перед вызовом `.map()` в методе `createEmbeddings`
-- Добавлена проверка `embeddings[index]` на массив в `IndexingService`
-- Добавлена защита от `undefined` в векторах при создании чанков
-- Обновлена документация с описанием изменений
-
-**Затронутые файлы:**
-- `apps/backend/src/services/openrouter.service.ts`
-- `apps/backend/src/services/indexing.service.ts`
-
-**Последствия:** Повышена устойчивость системы к некорректным ответам от OpenRouter API.
+## Основные возможности
+- Гибридный поиск по коду (семантический + полнотекстовый).
+- Индексация локальных директорий.
+- Чат с контекстом вашего кода.
+- Просмотр файлов через встроенный Monaco Editor.
