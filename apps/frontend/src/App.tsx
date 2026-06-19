@@ -208,7 +208,7 @@ export function App() {
 
 	const handleSessionKeyChange = (val: string) => {
 		setSessionKey(val);
-		api.setSessionKey(val);
+		api.setOpenRouterKey(val);
 	};
 
 	return (

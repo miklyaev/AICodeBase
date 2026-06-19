@@ -3,6 +3,7 @@ import { DatabaseService } from './database.service';
 import { OpenRouterService } from './openrouter.service';
 import { SearchService } from './search.service';
 import { ProjectsService } from './projects.service';
+import { SettingsService } from './settings.service';
 import { makeId } from '../utils/id';
 import { ChatResponse } from '../types';
 
@@ -13,10 +14,12 @@ export class ChatService {
 		private readonly searchService: SearchService,
 		private readonly openRouterService: OpenRouterService,
 		private readonly projectsService: ProjectsService,
+		private readonly settingsService: SettingsService,
 	) { }
 
 	async sendMessage(projectId: string, message: string, conversationId?: string, apiKey?: string): Promise<ChatResponse> {
 		const project = this.projectsService.getProjectById(projectId);
+		const key = apiKey || this.settingsService.getOpenRouterKeyOrThrow();
 		if (project.status !== 'ready' && project.status !== 'indexing') {
 			throw new BadRequestException({
 				code: 'PROJECT_NOT_INDEXED',
@@ -24,7 +27,7 @@ export class ChatService {
 			});
 		}
 
-		const references = await this.searchService.search(projectId, message, 8, apiKey); const actualConversationId = this.ensureConversation(projectId, conversationId);
+		const references = await this.searchService.search(projectId, message, 8, key); const actualConversationId = this.ensureConversation(projectId, conversationId);
 
 		this.db.run(
 			'INSERT INTO messages (id, conversationId, role, content, createdAt) VALUES (?, ?, ?, ?, ?)',
@@ -41,7 +44,7 @@ export class ChatService {
 		let confidence: 'high' | 'medium' | 'low' = references.length >= 3 ? 'high' : references.length > 0 ? 'medium' : 'low';
 
 		try {
-			const raw = await this.openRouterService.createChatCompletion(context, message, apiKey);
+			const raw = await this.openRouterService.createChatCompletion(context, message, key);
 			const parsed = JSON.parse(raw) as Partial<ChatResponse>; if (parsed.answer && typeof parsed.answer === 'string') answer = parsed.answer;
 			if (parsed.confidence === 'high' || parsed.confidence === 'medium' || parsed.confidence === 'low') {
 				confidence = parsed.confidence;
