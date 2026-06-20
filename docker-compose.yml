@@ -1,0 +1,21 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    restart: always
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+    volumes:
+      - ./apps/backend/data:/app/apps/backend/data
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    restart: always
+    ports:
+      - "5001:80" # Внешний Nginx на VDS будет проксировать сюда
+    depends_on:
+      - backend
