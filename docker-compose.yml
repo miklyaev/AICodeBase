@@ -6,9 +6,9 @@ services:
     restart: always
     environment:
       - PORT=3001
-      - NODE_ENV=production    volumes:
+      - NODE_ENV=production
+    volumes:
       - ./apps/backend/data:/app/apps/backend/data
-
   frontend:
     build:
       context: .
