@@ -5,7 +5,7 @@ import { AppModule } from './app.module';
 import { RequestIdMiddleware } from './common/request-id.middleware';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
 
-const allowedOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+const allowedOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173', 'https://code.ai-nvkz.ru'];
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
