@@ -9,7 +9,8 @@ services:
       - NODE_ENV=production
     ports:
       - "3001:3001"
-    volumes:      - ./apps/backend/data:/app/apps/backend/data
+    volumes:
+      - ./apps/backend/data:/app/apps/backend/data
   frontend:
     build:
       context: .
