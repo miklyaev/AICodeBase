@@ -28,6 +28,6 @@ COPY --from=builder /app/apps/backend/package.json ./apps/backend/
 COPY --from=builder /app/apps/backend/dist ./apps/backend/dist
 COPY --from=builder /app/packages/shared ./packages/shared
 
-EXPOSE 3000
+EXPOSE 3001
 
 CMD ["npm", "run", "start", "--workspace", "@aicodebase/backend"]
