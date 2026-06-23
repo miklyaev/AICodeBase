@@ -4,7 +4,7 @@ import { SettingsService } from './settings.service';
 @Injectable()
 export class OpenRouterService {
 	private readonly baseUrl = 'https://openrouter.ai/api/v1';
-	private readonly chatModel = process.env.OPENROUTER_CHAT_MODEL ?? 'qwen/qwen-2.5-coder-32b-instruct';//'gpt-5.3-codex';
+	private readonly chatModel = process.env.OPENROUTER_CHAT_MODEL ?? 'deepseek/deepseek-chat';//'gpt-5.3-codex';
 	private readonly embeddingModel = process.env.OPENROUTER_EMBED_MODEL ?? 'openai/text-embedding-3-small';
 
 	constructor(private readonly settingsService: SettingsService) { }
