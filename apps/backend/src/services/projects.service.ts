@@ -80,10 +80,11 @@ export class ProjectsService {
 	}
 
 	pickProjectFolderViaDialog(): string | null {
+		// В Docker-контейнере (Linux) системный диалог Windows недоступен.
+		// Если бэкенд запущен не на Windows, возвращаем null, чтобы фронтенд показал поле ввода.
 		if (process.platform !== 'win32') {
 			return null;
 		}
-
 		const script = [
 			"Add-Type -AssemblyName System.Windows.Forms",
 			"$dialog = New-Object System.Windows.Forms.FolderBrowserDialog",

@@ -26,12 +26,10 @@ export class ProjectsController {
 	@Post('/index')
 	async indexProject(
 		@Body() dto: IndexProjectDto,
-		@Headers('x-openrouter-key') apiKey?: string
 	) {
-		void this.indexingService.indexProject(dto.projectId, apiKey);
+		void this.indexingService.indexProject(dto.projectId);
 		return { started: true };
-	}
-	@Post('/clear-index')
+	} @Post('/clear-index')
 	async clearIndex(@Body() dto: IndexProjectDto) {
 		await this.projectsService.clearProjectIndex(dto.projectId);
 		return { success: true };

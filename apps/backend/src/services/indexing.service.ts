@@ -6,8 +6,8 @@ import { OpenRouterService } from './openrouter.service';
 import { ProjectsService } from './projects.service';
 import { ProgressEventsService } from './progress-events.service';
 import { LanceChunkRow, LanceDbService } from './lancedb.service';
-import { chunkText } from '../utils/chunking';
-import { isIndexableFile, MAX_FILE_SIZE_BYTES, shouldSkipDirectory, detectLanguage } from '../utils/file-rules';
+import { SettingsService } from './settings.service';
+import { chunkText } from '../utils/chunking'; import { isIndexableFile, MAX_FILE_SIZE_BYTES, shouldSkipDirectory, detectLanguage } from '../utils/file-rules';
 import { makeId, sha256 } from '../utils/id';
 
 interface IndexedFileInfo {
@@ -29,15 +29,16 @@ export class IndexingService {
 		private readonly openRouterService: OpenRouterService,
 		private readonly progressEvents: ProgressEventsService,
 		private readonly lanceDbService: LanceDbService,
+		private readonly settingsService: SettingsService,
 	) { }
 
 	getProgress(projectId: string) {
 		return this.progress.get(projectId) ?? { indexedFiles: 0, totalFiles: 0 };
 	}
 
-	async indexProject(projectId: string, apiKey?: string) {
-		const project = this.projectsService.getProjectById(projectId);
-		this.projectsService.setProjectStatus(projectId, 'indexing');
+	async indexProject(projectId: string) {
+		const apiKey = this.settingsService.getOpenRouterKeyOrThrow();
+		const project = this.projectsService.getProjectById(projectId); this.projectsService.setProjectStatus(projectId, 'indexing');
 
 		const files = this.scanFiles(project.rootPath);
 		this.progress.set(projectId, { indexedFiles: 0, totalFiles: files.length, message: 'Индексация запущена' });
