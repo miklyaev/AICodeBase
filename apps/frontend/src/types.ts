@@ -33,3 +33,9 @@ export interface ChatResponse {
 	references: CodeReference[];
 	conversationId: string;
 }
+
+export interface SearchFilters {
+	language?: string;
+	fileExtension?: string;
+	directory?: string;
+}

@@ -5,6 +5,12 @@ import { OpenRouterService } from './openrouter.service';
 import { ProjectsService } from './projects.service';
 import { LanceDbService } from './lancedb.service';
 
+export interface SearchFilters {
+	language?: string;
+	fileExtension?: string;
+	directory?: string;
+}
+
 interface KeywordChunkRow {
 	relativePath: string;
 	startLine: number;
@@ -23,7 +29,21 @@ export class SearchService {
 		private readonly lanceDbService: LanceDbService,
 	) { }
 
-	async search(projectId: string, query: string, topK = 8, apiKey?: string): Promise<CodeReference[]> {
+	private applyFilters(row: { relativePath: string; language: string }, filters: SearchFilters): boolean {
+		if (filters.language && row.language.toLowerCase() !== filters.language.toLowerCase()) return false;
+		if (filters.fileExtension) {
+			const ext = filters.fileExtension.startsWith('.') ? filters.fileExtension : `.${filters.fileExtension}`;
+			if (!row.relativePath.toLowerCase().endsWith(ext.toLowerCase())) return false;
+		}
+		if (filters.directory) {
+			const dir = filters.directory.replace(/\\/g, '/').toLowerCase();
+			const rel = row.relativePath.replace(/\\/g, '/').toLowerCase();
+			if (!rel.startsWith(dir)) return false;
+		}
+		return true;
+	}
+
+	async search(projectId: string, query: string, topK = 8, apiKey?: string, filters?: SearchFilters): Promise<CodeReference[]> {
 		this.projectsService.getProjectById(projectId);
 		const lowered = query.toLowerCase();
 		const queryVector = (await this.openRouterService.createEmbeddings([query], apiKey))[0] ?? [];
@@ -40,6 +60,7 @@ export class SearchService {
 		const merged = new Map<string, CodeReference>();
 
 		for (const row of vectorRows) {
+			if (filters && !this.applyFilters(row as any, filters)) continue;
 			const distance = Number((row as any)._distance ?? 1);
 			const score = 1 / (1 + Math.max(distance, 0));
 			const key = `${row.relativePath}:${row.startLine}:${row.endLine}`;
@@ -55,6 +76,7 @@ export class SearchService {
 		}
 
 		for (const row of keywordRows) {
+			if (filters && !this.applyFilters(row, filters)) continue;
 			const key = `${row.relativePath}:${row.startLine}:${row.endLine}`;
 			const prev = merged.get(key);
 			const keywordBoost = 0.35 + (row.symbolName?.toLowerCase().includes(lowered) ? 0.2 : 0);

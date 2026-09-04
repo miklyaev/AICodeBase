@@ -1,4 +1,4 @@
-import { ChatResponse, CodeReference, ProjectInfo, ProjectStatus } from './types';
+import { ChatResponse, CodeReference, ProjectInfo, ProjectStatus, SearchFilters } from './types';
 
 // Normalize VITE_API_BASE_URL: remove surrounding quotes if present, fallback to empty string
 function normalizeEnvUrl(value: unknown): string {
@@ -60,8 +60,13 @@ export const api = {
 			method: 'POST',
 			body: JSON.stringify({ projectId, message, conversationId }),
 		}),
-	search: (projectId: string, query: string) =>
-		request<CodeReference[]>(`/api/search?projectId=${encodeURIComponent(projectId)}&query=${encodeURIComponent(query)}`),
+	search: (projectId: string, query: string, filters?: SearchFilters) => {
+		const params = new URLSearchParams({ projectId, query });
+		if (filters?.language) params.set('language', filters.language);
+		if (filters?.fileExtension) params.set('fileExtension', filters.fileExtension);
+		if (filters?.directory) params.set('directory', filters.directory);
+		return request<CodeReference[]>(`/api/search?${params.toString()}`);
+	},
 	snippet: (projectId: string, filePath: string, startLine: number, endLine: number) =>
 		request<{ content: string; startLine: number; endLine: number; filePath: string }>(
 			`/api/files/snippet?projectId=${encodeURIComponent(projectId)}&filePath=${encodeURIComponent(filePath)}&startLine=${startLine}&endLine=${endLine}`,

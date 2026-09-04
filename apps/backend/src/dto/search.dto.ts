@@ -16,4 +16,16 @@ export class SearchQueryDto {
 	@Min(1)
 	@Max(30)
 	topK?: number;
+
+	@IsOptional()
+	@IsString()
+	language?: string;
+
+	@IsOptional()
+	@IsString()
+	fileExtension?: string;
+
+	@IsOptional()
+	@IsString()
+	directory?: string;
 }

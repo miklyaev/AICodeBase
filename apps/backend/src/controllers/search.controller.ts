@@ -11,6 +11,12 @@ export class SearchController {
 		@Query() query: SearchQueryDto,
 		@Headers('x-openrouter-key') apiKey?: string
 	) {
-		return this.searchService.search(query.projectId, query.query, query.topK ?? 8, apiKey);
+		const filters = {
+			language: query.language,
+			fileExtension: query.fileExtension,
+			directory: query.directory,
+		};
+		const hasFilters = filters.language || filters.fileExtension || filters.directory;
+		return this.searchService.search(query.projectId, query.query, query.topK ?? 8, apiKey, hasFilters ? filters : undefined);
 	}
 }

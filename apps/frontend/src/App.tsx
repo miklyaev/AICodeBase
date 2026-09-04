@@ -3,7 +3,7 @@ import Editor from '@monaco-editor/react';
 import type * as Monaco from 'monaco-editor';
 import type { editor as MonacoEditor } from 'monaco-editor';
 import { api, getApiUrl } from './api';
-import { ChatResponse, CodeReference, ProjectInfo, ProjectStatus } from './types';
+import { ChatResponse, CodeReference, ProjectInfo, ProjectStatus, SearchFilters } from './types';
 
 interface ChatMessage {
 	id: string;
@@ -11,6 +11,12 @@ interface ChatMessage {
 	content: string;
 	response?: ChatResponse;
 }
+
+const KNOWN_LANGUAGES = [
+	'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'json', 'yaml', 'yml', 'md', 'py',
+	'java', 'kt', 'go', 'rs', 'php', 'rb', 'cs', 'cpp', 'c', 'h', 'hpp', 'css',
+	'scss', 'html', 'vue', 'svelte', 'sql',
+];
 
 const toMonacoLanguage = (lang?: string) => {
 	switch ((lang ?? '').toLowerCase()) {
@@ -43,7 +49,14 @@ const toMonacoLanguage = (lang?: string) => {
 	}
 };
 
+function getInitialTheme(): 'light' | 'dark' {
+	const stored = localStorage.getItem('theme');
+	if (stored === 'dark' || stored === 'light') return stored;
+	return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
 export function App() {
+	const [theme, setTheme] = useState<'light' | 'dark'>(getInitialTheme);
 	const [hasKey, setHasKey] = useState(false);
 	const [sessionKey, setSessionKey] = useState('');
 	const [showKey, setShowKey] = useState(false);
@@ -52,6 +65,10 @@ export function App() {
 	const [chatInput, setChatInput] = useState('');
 	const [chat, setChat] = useState<ChatMessage[]>([]);
 	const [conversationId, setConversationId] = useState<string | undefined>();
+	const [searchQuery, setSearchQuery] = useState('');
+	const [searchFilters, setSearchFilters] = useState({ language: '', fileExtension: '', directory: '' });
+	const [searchResults, setSearchResults] = useState<CodeReference[] | null>(null);
+	const [searching, setSearching] = useState(false);
 	const [activeReference, setActiveReference] = useState<CodeReference | null>(null);
 	const [snippet, setSnippet] = useState<{ content: string; startLine: number; endLine: number } | null>(null);
 	const [busy, setBusy] = useState(false);
@@ -60,6 +77,13 @@ export function App() {
 	const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
 	const monacoRef = useRef<typeof Monaco | null>(null);
 	const decorationIdsRef = useRef<string[]>([]);
+
+	useEffect(() => {
+		document.documentElement.classList.toggle('dark', theme === 'dark');
+		localStorage.setItem('theme', theme);
+	}, [theme]);
+
+	const toggleTheme = () => setTheme((t) => (t === 'light' ? 'dark' : 'light'));
 
 	useEffect(() => {
 		void api.getSettingsStatus().then((s) => setHasKey(s.hasOpenRouterKey));
@@ -111,12 +135,13 @@ export function App() {
 	}, [snippet, activeReference]);
 
 	const activeReferences = useMemo(() => {
+		if (searchResults) return searchResults;
 		for (let i = chat.length - 1; i >= 0; i -= 1) {
 			const response = chat[i].response;
 			if (response?.references?.length) return response.references;
 		}
 		return [];
-	}, [chat]);
+	}, [chat, searchResults]);
 
 	async function refreshStatus(projectId: string) {
 		const next = await api.getProjectStatus(projectId);
@@ -166,6 +191,51 @@ export function App() {
 		} catch (e) {
 			setError((e as Error).message);
 		}
+	}
+
+	function emptyFilters(filters: typeof searchFilters) {
+		return !filters.language && !filters.fileExtension && !filters.directory;
+	}
+
+	function buildSearchFilters(): SearchFilters | undefined {
+		const filters: SearchFilters = {};
+		if (searchFilters.language) filters.language = searchFilters.language;
+		if (searchFilters.fileExtension) {
+			const ext = searchFilters.fileExtension.trim().replace(/^\./, '');
+			if (ext) filters.fileExtension = ext;
+		}
+		if (searchFilters.directory) filters.directory = searchFilters.directory.trim().replace(/^\/+|\/+$/g, '');
+		return emptyFilters(searchFilters) ? undefined : filters;
+	}
+
+	async function runSearch(e?: FormEvent) {
+		e?.preventDefault();
+		if (!project || !searchQuery.trim()) return;
+
+		setSearching(true);
+		setError(null);
+		try {
+			const filters = buildSearchFilters();
+			const results = await api.search(project.id, searchQuery.trim(), filters);
+			setSearchResults(results);
+
+			if (results[0]) {
+				await openReference(results[0]);
+			} else {
+				setActiveReference(null);
+				setSnippet(null);
+			}
+		} catch (err) {
+			setError((err as Error).message);
+		} finally {
+			setSearching(false);
+		}
+	}
+
+	function resetSearch() {
+		setSearchResults(null);
+		setSearchQuery('');
+		setSearchFilters({ language: '', fileExtension: '', directory: '' });
 	}
 
 	async function sendMessage(e: FormEvent) {
@@ -219,7 +289,12 @@ export function App() {
 					<p className="muted">Помогает исследовать исходный код проектов</p>
 				</header>
 				<section className="card">
-					<h2>Настройки API</h2>
+					<div className="row" style={{ justifyContent: 'space-between', marginBottom: '10px' }}>
+						<h2 style={{ margin: 0 }}>Настройки API</h2>
+						<button className="theme-toggle" onClick={toggleTheme} title={theme === 'light' ? 'Тёмная тема' : 'Светлая тема'}>
+							{theme === 'light' ? '\u263E' : '\u2600'}
+						</button>
+					</div>
 					<div className="row" style={{ alignItems: 'flex-end' }}>
 						<label style={{ flex: 1 }}>
 							OpenRouter API Key (Session)
@@ -289,6 +364,58 @@ export function App() {
 					<div className="muted small">{status?.message ?? 'Ожидание индексации'}</div>
 				</section>
 
+				<section className="card">
+					<h2>Поиск по коду</h2>
+					<form onSubmit={runSearch}>
+						<label>
+							Запрос
+							<input
+								value={searchQuery}
+								onChange={(e) => setSearchQuery(e.target.value)}
+								placeholder="Например: обработка ошибок"
+							/>
+						</label>
+						<label>
+							Язык
+							<select
+								value={searchFilters.language}
+								onChange={(e) => setSearchFilters((f) => ({ ...f, language: e.target.value }))}
+							>
+								<option value="">Все языки</option>
+								{KNOWN_LANGUAGES.map((lang) => (
+									<option key={lang} value={lang}>{lang}</option>
+								))}
+							</select>
+						</label>
+						<div className="row" style={{ gap: '8px' }}>
+							<label style={{ flex: 1 }}>
+								Расширение
+								<input
+									value={searchFilters.fileExtension}
+									onChange={(e) => setSearchFilters((f) => ({ ...f, fileExtension: e.target.value }))}
+									placeholder=".ts"
+								/>
+							</label>
+							<label style={{ flex: 1 }}>
+								Директория
+								<input
+									value={searchFilters.directory}
+									onChange={(e) => setSearchFilters((f) => ({ ...f, directory: e.target.value }))}
+									placeholder="src/components"
+								/>
+							</label>
+						</div>
+						<div className="row">
+							<button type="submit" disabled={!project || (!hasKey && !sessionKey) || searching || !searchQuery.trim()}>
+								{searching ? 'Поиск...' : 'Найти'}
+							</button>
+							<button type="button" className="ghost" onClick={resetSearch} disabled={!searchResults}>
+								Сбросить
+							</button>
+						</div>
+					</form>
+				</section>
+
 				<section className="card chat-card">
 					<h2>Чат</h2>
 					<div className="chat-list">
@@ -345,7 +472,9 @@ export function App() {
 							{activeReference.filePath} · строки {activeReference.startLine}-{activeReference.endLine}
 						</div>
 					) : (
-						<div className="muted">Выберите проект и задайте вопрос о коде</div>
+						<div className="muted">
+							{searchResults ? 'Ничего не найдено. Измените запрос или фильтры.' : 'Выберите проект и задайте вопрос о коде'}
+						</div>
 					)}
 				</div>
 
@@ -365,7 +494,9 @@ export function App() {
 							</button>
 						))
 					) : (
-						<div className="muted">Пока нет результатов поиска.</div>
+						<div className="muted">
+							{searchResults ? 'По заданным фильтрам ничего не найдено.' : 'Пока нет результатов поиска.'}
+						</div>
 					)}
 				</div>
 
@@ -387,7 +518,7 @@ export function App() {
 							wordWrap: 'off',
 							padding: { top: 10, bottom: 10 },
 						}}
-						theme="vs-dark"
+						theme={theme === 'dark' ? 'vs-dark' : 'vs'}
 					/>
 				</div>
 			</main>
