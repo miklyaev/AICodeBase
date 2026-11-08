@@ -1,0 +1,126 @@
+{
+  "status": "pass",
+  "checks": [
+    {
+      "name": "isolated-server-contract",
+      "status": "pass"
+    },
+    {
+      "name": "settings-key-status-before",
+      "status": "pass"
+    },
+    {
+      "name": "login-height-and-password-mask",
+      "status": "pass"
+    },
+    {
+      "name": "admin-index-status-and-ui",
+      "status": "pass"
+    },
+    {
+      "name": "legacy-fixture-requires-reset",
+      "status": "pass"
+    },
+    {
+      "name": "inline-reset-cancel-no-request",
+      "status": "pass"
+    },
+    {
+      "name": "reset-auth-and-validation-no-deletion",
+      "status": "pass"
+    },
+    {
+      "name": "single-authenticated-ui-reset",
+      "status": "pass"
+    },
+    {
+      "name": "empty-indexes-preserved-projects-and-history",
+      "status": "pass"
+    },
+    {
+      "name": "reload-fixture-idle-chat-disabled",
+      "status": "pass"
+    },
+    {
+      "name": "stale-reference-ui-no-paid-search",
+      "status": "skip"
+    },
+    {
+      "name": "restart-keeps-api-key-status",
+      "status": "pass"
+    },
+    {
+      "name": "zero-paid-requests-no-api-key-save",
+      "status": "pass"
+    }
+  ],
+  "responses": [
+    {
+      "route": "/api/settings/status",
+      "status": 200
+    },
+    {
+      "route": "/api/settings/indexes/status",
+      "status": 401
+    },
+    {
+      "route": "/api/settings/indexes/status",
+      "status": 409
+    },
+    {
+      "route": "/api/settings/indexes/status",
+      "status": 200
+    },
+    {
+      "route": "/api/settings/indexes/reset",
+      "status": 400
+    },
+    {
+      "route": "/api/settings/indexes/reset",
+      "status": 401
+    },
+    {
+      "route": "/api/settings/indexes/reset",
+      "status": 201
+    },
+    {
+      "route": "/api/projects/:id/status",
+      "status": 200
+    }
+  ],
+  "ratios": {
+    "login": 0.7999237804878049,
+    "password": 0.7999237804878049,
+    "others": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "apiKey": 1
+  },
+  "counts": {
+    "before": {
+      "projects": 2,
+      "files": 1,
+      "chunks": 1,
+      "conversations": 1,
+      "messages": 2
+    },
+    "after": {
+      "projects": 2,
+      "files": 0,
+      "chunks": 0,
+      "conversations": 1,
+      "messages": 2
+    }
+  },
+  "requests": {
+    "index": 0,
+    "search": 0,
+    "chat": 0,
+    "uiReset": 1,
+    "forbidden": 0
+  }
+}

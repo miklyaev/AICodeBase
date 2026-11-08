@@ -2,8 +2,8 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
-	// load env from project root (process.cwd()) so repo-level .env is picked up
-	const env = loadEnv(mode, process.cwd(), '');
+	// Frontend settings are VITE_* only; backend credentials are loaded separately.
+	const env = loadEnv(mode, process.cwd(), 'VITE_');
 
 	return {
 		plugins: [react()],

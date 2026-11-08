@@ -1,0 +1,14 @@
+{
+  "status": "pass",
+  "storage": "real LanceDB and in-memory SQLite",
+  "provider": "synthetic fetch; zero network requests",
+  "checks": [
+    "empty and whitespace files do not request embeddings",
+    "following source file reaches ready without duplicate vectors",
+    "empty update removes SQL and Lance chunks",
+    "project vector deletion matches case-sensitive projectId"
+  ],
+  "files": 3,
+  "chunksAfterEmpty": 0,
+  "syntheticRequests": 3
+}

@@ -1,0 +1,87 @@
+{
+  "generatedAt": "2026-11-07T17:54:16.410Z",
+  "result": "passed",
+  "browser": "Playwright Chromium, channel msedge, headless",
+  "app": "Actual frontend React App served by programmatic Vite createServer",
+  "vite": {
+    "configFile": false,
+    "envFile": false,
+    "envDir": "empty temporary directory",
+    "jsx": "automatic"
+  },
+  "api": {
+    "mode": "all /api/** requests intercepted; synthetic fixtures only; no backend, LLM, or secrets",
+    "observedResourcePaths": [
+      "/api/settings/status",
+      "/api/settings/status",
+      "/api/projects/select",
+      "/api/projects/project-a/status",
+      "/api/projects/project-a/status",
+      "/api/projects/events",
+      "/api/search",
+      "/api/files/snippet",
+      "/api/chat/message",
+      "/api/files/snippet",
+      "/api/chat/message",
+      "/api/files/snippet",
+      "/api/files/snippet",
+      "/api/search",
+      "/api/files/snippet",
+      "/api/files/snippet",
+      "/api/chat/message",
+      "/api/search",
+      "/api/files/snippet",
+      "/api/projects/select",
+      "/api/projects/project-b/status",
+      "/api/projects/project-b/status",
+      "/api/projects/events",
+      "/api/chat/message",
+      "/api/files/snippet",
+      "/api/files/snippet",
+      "/api/files/snippet",
+      "/api/projects/select",
+      "/api/projects/select",
+      "/api/projects/project-b/status",
+      "/api/projects/project-b/status"
+    ]
+  },
+  "limitations": [
+    "@monaco-editor/react was replaced with a local read-only textarea stub to avoid CDN/network dependency; Monaco rendering, workers, and editor decorations were not exercised."
+  ],
+  "checks": [
+    {
+      "name": "search A then chat answer B replaces right references; all eight B links render on the left",
+      "status": "passed"
+    },
+    {
+      "name": "clicking an older chat reference after a newer answer restores and selects the old reference list",
+      "status": "passed"
+    },
+    {
+      "name": "reset search restores the latest non-empty chat answer",
+      "status": "passed"
+    },
+    {
+      "name": "reset search restores latest empty chat answer rather than an earlier answer",
+      "status": "passed"
+    },
+    {
+      "name": "changing projects clears prior chat and code references",
+      "status": "passed"
+    },
+    {
+      "name": "a slow stale snippet cannot overwrite a newer selected snippet",
+      "status": "passed"
+    },
+    {
+      "name": "snippet failure is rendered without an unhandled rejection",
+      "status": "passed"
+    },
+    {
+      "name": "a delayed project A selection cannot override a later project B selection",
+      "status": "passed"
+    }
+  ],
+  "pageErrors": [],
+  "command": "node scripts/e2e/run-references.cjs"
+}

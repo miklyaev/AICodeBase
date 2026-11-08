@@ -12,12 +12,6 @@ export class IndexProjectDto {
 	projectId!: string;
 }
 
-export class ClearProjectIndexDto {
-	@IsString()
-	@MinLength(1)
-	projectId!: string;
-}
-
 export interface ProjectStatusResponse {
 	projectId: string;
 	status: 'idle' | 'indexing' | 'ready' | 'failed';

@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Headers } from '@nestjs/common';
+import { Body, Controller, Post } from '@nestjs/common';
 import { ChatMessageDto } from '../dto/chat.dto';
 import { ChatService } from '../services/chat.service';
 
@@ -8,9 +8,8 @@ export class ChatController {
 
 	@Post('/message')
 	message(
-		@Body() dto: ChatMessageDto,
-		@Headers('x-openrouter-key') apiKey?: string
+		@Body() dto: ChatMessageDto
 	) {
-		return this.chatService.sendMessage(dto.projectId, dto.message, dto.conversationId, apiKey);
+		return this.chatService.sendMessage(dto.projectId, dto.message, dto.conversationId);
 	}
 }

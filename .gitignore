@@ -1,7 +1,15 @@
 /.kodik
 /backend/node_modules/
 # backend env files
+/.env
+/.env.*
+/.llm-config-*
+/password.txt
+/.e2e-runtime/
 /apps/backend/.env
+/apps/backend/.env.*
+!/apps/backend/.env.example
+/apps/backend/.llm-config-*
 /apps/frontend/.env
 
 # dependencies

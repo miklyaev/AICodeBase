@@ -1,4 +1,15 @@
-import { shouldSkipDirectory, detectLanguage, isIndexableFile, MAX_FILE_SIZE_BYTES } from '../file-rules';
+import { shouldSkipDirectory, detectLanguage, isIndexableFile, isSecretFile, MAX_FILE_SIZE_BYTES } from '../file-rules';
+
+describe('administrator password file', () => {
+	it('blocks the password file used for administrator setup', () => {
+		expect(isSecretFile('password.txt')).toBe(true);
+		expect(isSecretFile('D:\\project\\PASSWORD.TXT')).toBe(true);
+	});
+
+	it('never indexes the administrator password file', () => {
+		expect(isIndexableFile('password.txt', '/project/password.txt')).toBe(false);
+	});
+});
 
 describe('shouldSkipDirectory', () => {
 	it('should skip node_modules', () => {

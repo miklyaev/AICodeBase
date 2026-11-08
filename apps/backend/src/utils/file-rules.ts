@@ -21,7 +21,7 @@ const TEXT_EXTENSIONS = new Set([
 	'.scss', '.html', '.vue', '.svelte', '.sql'
 ]);
 
-const SECRET_FILE_NAMES = new Set(['.env', '.env.local', '.env.production', '.npmrc']);
+const SECRET_FILE_NAMES = new Set(['.env', '.env.local', '.env.production', '.npmrc', 'password.txt']);
 
 const BINARY_EXTENSIONS = new Set([
 	'.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.svg', '.mp4', '.mp3', '.wav', '.zip', '.tar', '.gz', '.pdf', '.exe', '.dll'
@@ -38,11 +38,16 @@ export function detectLanguage(filePath: string) {
 	return ext.replace('.', '') || 'text';
 }
 
+export function isSecretFile(filePath: string) {
+	return filePath.split(/[\\/]/).some((part) => {
+		const name = part.toLowerCase();
+		return SECRET_FILE_NAMES.has(name) || name.startsWith('.env') || name.includes('.env.') || name.startsWith('.llm-config-') ||
+			/\.(pem|key|p12|crt)$/.test(name) || /^(credentials|serviceaccount).*\.json$/.test(name);
+	});
+}
+
 export function isIndexableFile(fileName: string, fullPath: string) {
-	const lowerName = fileName.toLowerCase();
-	if (SECRET_FILE_NAMES.has(lowerName)) return false;
-	if (lowerName.includes('.env.')) return false;
-	if (lowerName.endsWith('.pem') || lowerName.endsWith('.key') || lowerName.endsWith('.p12') || lowerName.endsWith('.crt')) return false;
+	if (isSecretFile(fileName) || isSecretFile(fullPath)) return false;
 
 	const ext = path.extname(fullPath).toLowerCase();
 	if (BINARY_EXTENSIONS.has(ext)) return false;

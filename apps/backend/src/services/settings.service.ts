@@ -1,32 +1,32 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import * as dotenv from 'dotenv';
-
-dotenv.config();
+import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { persistApiKey } from '../config/environment';
 
 @Injectable()
 export class SettingsService {
-	private openRouterKey: string | null = process.env.OPENROUTER_API_KEY || null;
+	private apiKey: string | null = process.env.LLM_API_KEY?.trim() || null;
 
-	setOpenRouterKey(key: string) {
+	setApiKey(key: string) {
 		const normalized = key.trim();
-		if (normalized.length < 20) {
+		if (!/^[A-Za-z0-9._~+\/-]{20,4096}={0,2}$/.test(normalized) || normalized.length > 4096) {
 			throw new BadRequestException({ code: 'INVALID_KEY_FORMAT', message: 'Некорректный формат API key' });
 		}
-		this.openRouterKey = normalized;
-	}
-
-	clearOpenRouterKey() {
-		this.openRouterKey = null;
-	}
-
-	hasOpenRouterKey() {
-		return Boolean(this.openRouterKey);
-	}
-
-	getOpenRouterKeyOrThrow() {
-		if (!this.openRouterKey) {
-			throw new BadRequestException({ code: 'OPENROUTER_KEY_MISSING', message: 'Сначала укажите OpenRouter API key' });
+		try {
+			persistApiKey(normalized);
+		} catch {
+			throw new ServiceUnavailableException({ code: 'SETTINGS_SAVE_FAILED', message: 'Не удалось сохранить настройки сервера' });
 		}
-		return this.openRouterKey;
+		this.apiKey = normalized;
+		process.env.LLM_API_KEY = normalized;
+	}
+
+	hasApiKey() {
+		return Boolean(this.apiKey);
+	}
+
+	getApiKeyOrThrow() {
+		if (!this.apiKey) {
+			throw new BadRequestException({ code: 'LLM_KEY_MISSING', message: 'API key не настроен. Обратитесь к администратору.' });
+		}
+		return this.apiKey;
 	}
 }

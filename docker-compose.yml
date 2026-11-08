@@ -11,6 +11,7 @@ services:
       - "3001:3001"
     volumes:
       - ./apps/backend/data:/app/apps/backend/data
+      - ./apps/backend/.env:/app/apps/backend/.env
   frontend:
     build:
       context: .

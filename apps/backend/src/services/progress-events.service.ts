@@ -6,6 +6,7 @@ export interface ProgressEventPayload {
 	| 'indexing.started'
 	| 'indexing.progress'
 	| 'indexing.fileSkipped'
+	| 'indexing.fileFailed'
 	| 'indexing.completed'
 	| 'indexing.failed'
 	| 'chat.completed'

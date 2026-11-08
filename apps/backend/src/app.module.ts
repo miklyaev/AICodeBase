@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { IndexLifecycleService } from './services/index-lifecycle.service';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { SettingsController } from './controllers/settings.controller';
 import { ProjectsController } from './controllers/projects.controller';
@@ -7,7 +8,8 @@ import { ChatController } from './controllers/chat.controller';
 import { FilesController } from './controllers/files.controller';
 import { DatabaseService } from './services/database.service';
 import { SettingsService } from './services/settings.service';
-import { OpenRouterService } from './services/openrouter.service';
+import { AdminAuthService } from './services/admin-auth.service';
+import { LlmService } from './services/llm.service';
 import { ProjectsService } from './services/projects.service';
 import { IndexingService } from './services/indexing.service';
 import { SearchService } from './services/search.service';
@@ -20,8 +22,10 @@ import { LanceDbService } from './services/lancedb.service';
 	controllers: [SettingsController, ProjectsController, SearchController, ChatController, FilesController],
 	providers: [
 		DatabaseService,
+		IndexLifecycleService,
 		SettingsService,
-		OpenRouterService,
+		AdminAuthService,
+		LlmService,
 		ProjectsService,
 		IndexingService,
 		SearchService,

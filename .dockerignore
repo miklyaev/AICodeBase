@@ -1,0 +1,17 @@
+.git
+**/node_modules
+**/dist
+**/build
+**/coverage
+**/.env
+**/.env.*
+**/.llm-config-*
+**/password.txt
+.e2e-runtime
+reports/e2e
+**/*.pem
+**/*.key
+**/credentials*.json
+**/serviceAccount*.json
+**/data
+**/*.log

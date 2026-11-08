@@ -1,0 +1,121 @@
+{
+  "status": "pass",
+  "checks": [
+    {
+      "name": "home-and-notice",
+      "status": "pass"
+    },
+    {
+      "name": "dialog-escape-close-reopen",
+      "status": "pass"
+    },
+    {
+      "name": "wrong-password-then-login",
+      "status": "pass"
+    },
+    {
+      "name": "save-real-api-key",
+      "status": "pass"
+    },
+    {
+      "name": "logout-revocation-and-setters",
+      "status": "pass"
+    },
+    {
+      "name": "five-login-attempts-per-minute",
+      "status": "pass"
+    },
+    {
+      "name": "restart-key-persistence-and-session-revocation",
+      "status": "pass"
+    },
+    {
+      "name": "secret-snippets-and-prefix-traversal",
+      "status": "pass"
+    },
+    {
+      "name": "fixture-select-and-single-index",
+      "status": "pass"
+    },
+    {
+      "name": "single-search-refs-and-monaco",
+      "status": "pass"
+    },
+    {
+      "name": "single-chat-answer-and-refs",
+      "status": "pass"
+    }
+  ],
+  "responses": [
+    {
+      "route": "/api/settings/status",
+      "status": 200
+    },
+    {
+      "route": "/api/settings/admin/login",
+      "status": 401
+    },
+    {
+      "route": "/api/settings/admin/login",
+      "status": 201
+    },
+    {
+      "route": "/api/settings/api-key",
+      "status": 201
+    },
+    {
+      "route": "/api/settings/admin/logout",
+      "status": 201
+    },
+    {
+      "route": "/api/settings/api-key",
+      "status": 401
+    },
+    {
+      "route": "/api/settings/openrouter-key",
+      "status": 404
+    },
+    {
+      "route": "/api/settings/admin/login",
+      "status": 429
+    },
+    {
+      "route": "/api/projects/select",
+      "status": 201
+    },
+    {
+      "route": "/api/files/snippet",
+      "status": 403
+    },
+    {
+      "route": "/api/projects/:id/status",
+      "status": 200
+    },
+    {
+      "route": "/api/projects/events",
+      "status": 200
+    },
+    {
+      "route": "/api/projects/index",
+      "status": 201
+    },
+    {
+      "route": "/api/search",
+      "status": 200
+    },
+    {
+      "route": "/api/files/snippet",
+      "status": 200
+    },
+    {
+      "route": "/api/chat/message",
+      "status": 201
+    }
+  ],
+  "indexing": {
+    "status": "ready",
+    "message": "Индексация завершена"
+  },
+  "answer": "Функция calculateOrderTotal (payment.ts:1-5) принимает два параметра: массив цен prices и значение скидки discount. subtotal вычисляется как сумма всех элементов массива prices с помощью reduce. Итоговая сумма возвращается как разность subtotal и discount. Для prices=[100,50] subtotal=100+50=150; итоговая сумма: 150-20=130.",
+  "browser": "msedge"
+}

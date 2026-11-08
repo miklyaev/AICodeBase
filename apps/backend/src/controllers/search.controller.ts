@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Headers } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { SearchQueryDto } from '../dto/search.dto';
 import { SearchService } from '../services/search.service';
 
@@ -8,8 +8,7 @@ export class SearchController {
 
 	@Get()
 	search(
-		@Query() query: SearchQueryDto,
-		@Headers('x-openrouter-key') apiKey?: string
+		@Query() query: SearchQueryDto
 	) {
 		const filters = {
 			language: query.language,
@@ -17,6 +16,6 @@ export class SearchController {
 			directory: query.directory,
 		};
 		const hasFilters = filters.language || filters.fileExtension || filters.directory;
-		return this.searchService.search(query.projectId, query.query, query.topK ?? 8, apiKey, hasFilters ? filters : undefined);
+		return this.searchService.search(query.projectId, query.query, query.topK ?? 8, hasFilters ? filters : undefined);
 	}
 }

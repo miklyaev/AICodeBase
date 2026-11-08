@@ -12,33 +12,72 @@ export function getApiUrl(path: string) {
 	return `${API_ORIGIN}${path}`;
 }
 
+export class ApiError extends Error {
+	constructor(message: string, public readonly status: number) {
+		super(message);
+		this.name = 'ApiError';
+	}
+}
+
+export interface AdminSession {
+	token: string;
+	expiresAt: number;
+}
+
+export interface IndexesStatus {
+	embeddingModel: string;
+	storedEmbeddingModel: string | null;
+	requiresReset: boolean;
+	indexedProjects: number;
+	indexedChunks: number;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
 	const response = await fetch(getApiUrl(path), {
-		headers: { 'Content-Type': 'application/json' },
 		...init,
+		headers: { 'Content-Type': 'application/json', ...init?.headers },
 	});
 
 	if (!response.ok) {
 		const error = await response.json().catch(() => ({}));
-		throw new Error(error.message ?? 'Ошибка запроса');
+		throw new ApiError(error.message ?? 'Ошибка запроса', response.status);
 	}
 
 	return response.json() as Promise<T>;
 }
 
 export const api = {
-	getSettingsStatus: () => request<{ hasOpenRouterKey: boolean }>('/api/settings/status'),
-	setOpenRouterKey: (apiKey: string) =>
-		request<{ success: boolean }>('/api/settings/openrouter-key', {
+	getSettingsStatus: () => request<{ hasApiKey: boolean }>('/api/settings/status'),
+	adminLogin: (login: string, password: string) =>
+		request<AdminSession>('/api/settings/admin/login', {
 			method: 'POST',
-			body: JSON.stringify({
-				apiKey: typeof apiKey === 'object' ? (apiKey as any).apiKey : apiKey,
-				remember: false,
-			}),
-		}), pickProjectFolder: () =>
-			request<{ path: string | null }>('/api/projects/pick-folder', {
-				method: 'POST',
-			}),
+			body: JSON.stringify({ login, password }),
+		}),
+	adminLogout: (token: string) =>
+		request<{ success: boolean }>('/api/settings/admin/logout', {
+			method: 'POST',
+			headers: { Authorization: `Bearer ${token}` },
+		}),
+	saveApiKey: (apiKey: string, token: string) =>
+		request<{ success: boolean }>('/api/settings/api-key', {
+			method: 'POST',
+			headers: { Authorization: `Bearer ${token}` },
+			body: JSON.stringify({ apiKey }),
+		}),
+	getIndexesStatus: (token: string) =>
+		request<IndexesStatus>('/api/settings/indexes/status', {
+			headers: { Authorization: `Bearer ${token}` },
+		}),
+	resetIndexes: (token: string) =>
+		request<{ success: true }>('/api/settings/indexes/reset', {
+			method: 'POST',
+			headers: { Authorization: `Bearer ${token}` },
+			body: JSON.stringify({ confirm: true }),
+		}),
+	pickProjectFolder: () =>
+		request<{ path: string | null }>('/api/projects/pick-folder', {
+			method: 'POST',
+		}),
 	selectProject: (path: string) =>
 		request<ProjectInfo>('/api/projects/select', {
 			method: 'POST',

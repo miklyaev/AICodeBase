@@ -1,9 +1,11 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useEffect, useReducer, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import type * as Monaco from 'monaco-editor';
 import type { editor as MonacoEditor } from 'monaco-editor';
 import { api, getApiUrl } from './api';
+import { ApiSettingsDialog } from './ApiSettingsDialog';
 import { ChatResponse, CodeReference, ProjectInfo, ProjectStatus, SearchFilters } from './types';
+import { initialReferenceState, latestChatReferences, referenceReducer, sameReference, snippetLineNumber } from './code-references';
 
 interface ChatMessage {
 	id: string;
@@ -58,8 +60,9 @@ function getInitialTheme(): 'light' | 'dark' {
 export function App() {
 	const [theme, setTheme] = useState<'light' | 'dark'>(getInitialTheme);
 	const [hasKey, setHasKey] = useState(false);
-	const [sessionKey, setSessionKey] = useState('');
-	const [showKey, setShowKey] = useState(false);
+	const [settingsOpen, setSettingsOpen] = useState(false);
+	const [settingsLoading, setSettingsLoading] = useState(true);
+	const [settingsError, setSettingsError] = useState(false);
 	const [projectPath, setProjectPath] = useState(''); const [project, setProject] = useState<ProjectInfo | null>(null);
 	const [status, setStatus] = useState<ProjectStatus | null>(null);
 	const [chatInput, setChatInput] = useState('');
@@ -69,14 +72,22 @@ export function App() {
 	const [searchFilters, setSearchFilters] = useState({ language: '', fileExtension: '', directory: '' });
 	const [searchResults, setSearchResults] = useState<CodeReference[] | null>(null);
 	const [searching, setSearching] = useState(false);
-	const [activeReference, setActiveReference] = useState<CodeReference | null>(null);
-	const [snippet, setSnippet] = useState<{ content: string; startLine: number; endLine: number } | null>(null);
+	const [{ references: activeReferences, activeReference, snippet, loading: snippetLoading }, dispatchReferences] =
+		useReducer(referenceReducer, initialReferenceState);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [editorReady, setEditorReady] = useState(false);
 
 	const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
 	const monacoRef = useRef<typeof Monaco | null>(null);
 	const decorationIdsRef = useRef<string[]>([]);
+	const indexesGeneration = useRef(0);
+	const statusRequest = useRef(0);
+	const projectSelectionRequest = useRef(0);
+	const snippetRequest = useRef(0);
+	const resultsRequest = useRef(0);
+	const selectedProjectId = useRef(project?.id);
+	selectedProjectId.current = project?.id;
 
 	useEffect(() => {
 		document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -86,7 +97,7 @@ export function App() {
 	const toggleTheme = () => setTheme((t) => (t === 'light' ? 'dark' : 'light'));
 
 	useEffect(() => {
-		void api.getSettingsStatus().then((s) => setHasKey(s.hasOpenRouterKey));
+		void refreshSettingsStatus();
 	}, []);
 
 	useEffect(() => {
@@ -132,20 +143,50 @@ export function App() {
 		]);
 
 		editorRef.current.revealLineInCenter(start);
-	}, [snippet, activeReference]);
+	}, [snippet, activeReference, editorReady]);
 
-	const activeReferences = useMemo(() => {
-		if (searchResults) return searchResults;
-		for (let i = chat.length - 1; i >= 0; i -= 1) {
-			const response = chat[i].response;
-			if (response?.references?.length) return response.references;
+	async function refreshSettingsStatus() {
+		setSettingsLoading(true);
+		setSettingsError(false);
+		try {
+			const result = await api.getSettingsStatus();
+			setHasKey(result.hasApiKey);
+		} catch {
+			setHasKey(false);
+			setSettingsError(true);
+		} finally {
+			setSettingsLoading(false);
 		}
-		return [];
-	}, [chat, searchResults]);
+	}
 
 	async function refreshStatus(projectId: string) {
+		const request = ++statusRequest.current;
 		const next = await api.getProjectStatus(projectId);
-		setStatus(next);
+		if (statusRequest.current === request && selectedProjectId.current === projectId) setStatus(next);
+	}
+
+	function onIndexesReset() {
+		indexesGeneration.current += 1;
+		statusRequest.current += 1;
+		resultsRequest.current += 1;
+		dispatchReferences({ type: 'select', references: [], reference: null, request: ++snippetRequest.current });
+		setSearchResults(null);
+		setSearching(false);
+		setBusy(false);
+		setError(null);
+		// Keep the conversation and its text, but never expose stale code references.
+		setChat((previous) => previous.map((message) => message.response
+			? { ...message, response: { ...message.response, references: [] } }
+			: message));
+		setProject((previous) => previous ? { ...previous, status: 'idle', filesCount: 0, chunksCount: 0 } : null);
+		const projectId = selectedProjectId.current;
+		setStatus(projectId ? {
+			projectId, status: 'idle', filesCount: 0, chunksCount: 0, indexedFiles: 0, totalFiles: 0,
+			message: 'Индексы сброшены. Запустите полную переиндексацию.',
+		} : null);
+		if (projectId) void refreshStatus(projectId).catch(() => {
+			setError('Индексы сброшены, но не удалось обновить статус проекта. Повторите проверку.');
+		});
 	}
 
 	async function pickProjectFolder() {
@@ -161,18 +202,32 @@ export function App() {
 	}
 
 	async function selectProject() {
+		const request = ++projectSelectionRequest.current;
 		setError(null);
 		try {
 			const selected = await api.selectProject(projectPath);
+			if (projectSelectionRequest.current !== request) return;
+			if (selected.id !== selectedProjectId.current) {
+				indexesGeneration.current += 1;
+				resultsRequest.current += 1;
+				dispatchReferences({ type: 'select', references: [], reference: null, request: ++snippetRequest.current });
+				setSearchResults(null);
+				setChat([]);
+				setConversationId(undefined);
+				setSearching(false);
+				setBusy(false);
+				setStatus(null);
+			}
+			selectedProjectId.current = selected.id;
 			setProject(selected);
 			await refreshStatus(selected.id);
 		} catch (e) {
-			setError((e as Error).message);
+			if (projectSelectionRequest.current === request) setError((e as Error).message);
 		}
 	}
 
 	async function startIndexing() {
-		if (!project) return;
+		if (!project || !hasKey) return;
 		setError(null);
 		try {
 			await api.startIndexing(project.id);
@@ -187,6 +242,7 @@ export function App() {
 		setError(null);
 		try {
 			await api.clearIndex(project.id);
+			if (selectedProjectId.current === project.id) onIndexesReset();
 			await refreshStatus(project.id);
 		} catch (e) {
 			setError((e as Error).message);
@@ -210,38 +266,40 @@ export function App() {
 
 	async function runSearch(e?: FormEvent) {
 		e?.preventDefault();
-		if (!project || !searchQuery.trim()) return;
+		if (!project || !hasKey || searching || !searchQuery.trim()) return;
 
+		const requestGeneration = indexesGeneration.current;
+		const request = ++resultsRequest.current;
 		setSearching(true);
 		setError(null);
 		try {
 			const filters = buildSearchFilters();
 			const results = await api.search(project.id, searchQuery.trim(), filters);
+			if (indexesGeneration.current !== requestGeneration || resultsRequest.current !== request) return;
 			setSearchResults(results);
-
-			if (results[0]) {
-				await openReference(results[0]);
-			} else {
-				setActiveReference(null);
-				setSnippet(null);
-			}
+			await openReference(results[0] ?? null, results);
 		} catch (err) {
-			setError((err as Error).message);
+			if (indexesGeneration.current === requestGeneration && resultsRequest.current === request) setError((err as Error).message);
 		} finally {
-			setSearching(false);
+			if (indexesGeneration.current === requestGeneration) setSearching(false);
 		}
 	}
 
 	function resetSearch() {
+		resultsRequest.current += 1;
 		setSearchResults(null);
 		setSearchQuery('');
 		setSearchFilters({ language: '', fileExtension: '', directory: '' });
+		const references = latestChatReferences(chat);
+		void openReference(references[0] ?? null, references);
 	}
 
 	async function sendMessage(e: FormEvent) {
 		e.preventDefault();
-		if (!project || !chatInput.trim()) return;
+		if (!project || !hasKey || !chatReady || busy || !chatInput.trim()) return;
 
+		const requestGeneration = indexesGeneration.current;
+		const request = ++resultsRequest.current;
 		setBusy(true);
 		setError(null);
 		const message = chatInput.trim();
@@ -251,35 +309,42 @@ export function App() {
 
 		try {
 			const response = await api.chatMessage(project.id, message, conversationId);
+			if (indexesGeneration.current !== requestGeneration) return;
 			setConversationId(response.conversationId);
 			setChat((prev) => [
 				...prev,
 				{ id: crypto.randomUUID(), role: 'assistant', content: response.answer, response },
 			]);
 
-			if (response.references[0]) {
-				await openReference(response.references[0]);
+			if (resultsRequest.current === request) {
+				setSearchResults(null);
+				await openReference(response.references[0] ?? null, response.references);
 			}
 		} catch (err) {
-			setError((err as Error).message);
+			if (indexesGeneration.current === requestGeneration) setError((err as Error).message);
 		} finally {
-			setBusy(false);
+			if (indexesGeneration.current === requestGeneration) setBusy(false);
 		}
 	}
 
-	async function openReference(reference: CodeReference) {
+	async function openReference(reference: CodeReference | null, references = activeReferences) {
 		if (!project) return;
-		setActiveReference(reference);
-		const content = await api.snippet(project.id, reference.filePath, reference.startLine, reference.endLine);
-		setSnippet({ content: content.content, startLine: content.startLine, endLine: content.endLine });
+		const request = ++snippetRequest.current;
+		setError(null);
+		dispatchReferences({ type: 'select', references, reference, request });
+		if (!reference) return;
+		try {
+			const content = await api.snippet(project.id, reference.filePath, reference.startLine, reference.endLine);
+			dispatchReferences({ type: 'loaded', snippet: content, request });
+		} catch (err) {
+			if (snippetRequest.current !== request) return;
+			dispatchReferences({ type: 'failed', request });
+			setError((err as Error).message);
+		}
 	}
 
 	const progress = status?.totalFiles ? Math.round((status.indexedFiles / status.totalFiles) * 100) : 0;
-
-	const handleSessionKeyChange = (val: string) => {
-		setSessionKey(val);
-		api.setOpenRouterKey(val);
-	};
+	const chatReady = (status?.status ?? project?.status) === 'ready';
 
 	return (
 		<div className="app-root">
@@ -287,48 +352,23 @@ export function App() {
 				<header className="card">
 					<h1>AI Codebase RAG Agent</h1>
 					<p className="muted">Помогает исследовать исходный код проектов</p>
-				</header>
-				<section className="card">
-					<div className="row" style={{ justifyContent: 'space-between', marginBottom: '10px' }}>
-						<h2 style={{ margin: 0 }}>Настройки API</h2>
-						<button className="theme-toggle" onClick={toggleTheme} title={theme === 'light' ? 'Тёмная тема' : 'Светлая тема'}>
+					<nav className="row" aria-label="Настройки приложения">
+						<button type="button" className="ghost" onClick={() => setSettingsOpen(true)} aria-haspopup="dialog">
+							Настройка API
+						</button>
+						<button type="button" className="theme-toggle" onClick={toggleTheme}
+							title={theme === 'light' ? 'Тёмная тема' : 'Светлая тема'}
+							aria-label={theme === 'light' ? 'Включить тёмную тему' : 'Включить светлую тему'}>
 							{theme === 'light' ? '\u263E' : '\u2600'}
 						</button>
-					</div>
-					<div className="row" style={{ alignItems: 'flex-end' }}>
-						<label style={{ flex: 1 }}>
-							OpenRouter API Key (Session)
-							<div style={{ position: 'relative', width: '100%' }}>
-								<input
-									type={showKey ? 'text' : 'password'}
-									value={sessionKey}
-									onChange={(e) => handleSessionKeyChange(e.target.value)}
-									placeholder="sk-or-v1-..."
-									style={{ paddingRight: '60px', width: '100%', boxSizing: 'border-box' }}
-								/>
-								<button
-									type="button"
-									className="ghost"
-									onClick={() => setShowKey(!showKey)}
-									style={{
-										position: 'absolute',
-										right: '5px',
-										top: '50%',
-										transform: 'translateY(-50%)',
-										padding: '4px 8px',
-										fontSize: '12px',
-										height: 'auto',
-										margin: 0
-									}}
-								>
-									{showKey ? 'Hide' : 'Show'}
-								</button>
-							</div>
-						</label>					</div>
-					{!hasKey && !sessionKey && (
-						<p className="error small">Ключ не установлен. Введите ключ для работы.</p>
-					)}
-				</section>
+					</nav>
+					{settingsLoading ? <p className="muted" role="status">Проверка настройки API...</p> : settingsError ? (
+						<div className="error" role="alert">
+							Не удалось проверить настройку API.
+							<button type="button" className="ghost" onClick={() => void refreshSettingsStatus()}>Повторить</button>
+						</div>
+					) : !hasKey ? <p className="warn" role="status">API не настроен. Обратитесь к администратору</p> : null}
+				</header>
 
 				<section className="card">
 					<h2>Проект</h2>
@@ -342,7 +382,7 @@ export function App() {
 						<button onClick={selectProject} disabled={!projectPath.trim()}>
 							Выбрать папку проекта
 						</button>
-						<button onClick={startIndexing} disabled={!project || (!hasKey && !sessionKey)}>
+						<button onClick={startIndexing} disabled={!project || !hasKey}>
 							Индексировать
 						</button>						<button className="ghost" onClick={clearIndex} disabled={!project}>
 							Очистить индекс
@@ -406,7 +446,7 @@ export function App() {
 							</label>
 						</div>
 						<div className="row">
-							<button type="submit" disabled={!project || (!hasKey && !sessionKey) || searching || !searchQuery.trim()}>
+							<button type="submit" disabled={!project || !hasKey || searching || !searchQuery.trim()}>
 								{searching ? 'Поиск...' : 'Найти'}
 							</button>
 							<button type="button" className="ghost" onClick={resetSearch} disabled={!searchResults}>
@@ -424,8 +464,12 @@ export function App() {
 								<div>{item.content}</div>
 								{item.response?.references?.length ? (
 									<div className="refs-inline">
-										{item.response.references.slice(0, 3).map((ref, idx) => (
-											<button key={`${ref.filePath}-${idx}`} className="link-btn" onClick={() => void openReference(ref)}>
+										{item.response.references.map((ref, idx) => (
+											<button key={`${ref.filePath}-${idx}`} className="link-btn" onClick={() => {
+												resultsRequest.current += 1;
+												setSearchResults(null);
+												void openReference(ref, item.response!.references);
+											}}>
 												{ref.filePath}:{ref.startLine}-{ref.endLine}
 											</button>
 										))}
@@ -440,11 +484,11 @@ export function App() {
 							value={chatInput}
 							onChange={(e) => setChatInput(e.target.value)}
 							placeholder="Например: Где реализована авторизация пользователя?"
-							disabled={!project || (!hasKey && !sessionKey) || busy}
+							disabled={!project || !hasKey || !chatReady || busy}
 						/>
 						<button
 							type="submit"
-							disabled={!project || (!hasKey && !sessionKey) || busy || !chatInput.trim()}
+							disabled={!project || !hasKey || !chatReady || busy || !chatInput.trim()}
 							style={{
 								padding: '4px 12px',
 								minWidth: 'auto',
@@ -482,9 +526,12 @@ export function App() {
 					{activeReferences.length ? (
 						activeReferences.map((ref, idx) => (
 							<button
-								className={`ref-item ${activeReference?.filePath === ref.filePath && activeReference?.startLine === ref.startLine ? 'active' : ''}`}
+								className={`ref-item ${sameReference(activeReference, ref) ? 'active' : ''}`}
 								key={`${ref.filePath}-${ref.startLine}-${idx}`}
-								onClick={() => void openReference(ref)}
+								onClick={() => {
+									resultsRequest.current += 1;
+									void openReference(ref);
+								}}
 							>
 								<div className="ref-title">
 									{ref.filePath}:{ref.startLine}-{ref.endLine}
@@ -504,17 +551,18 @@ export function App() {
 					<Editor
 						height="100%"
 						language={toMonacoLanguage(activeReference?.language)}
-						value={snippet?.content ?? '// Здесь будет отображаться кодовый фрагмент'}
+						value={snippet?.content ?? (snippetLoading ? '// Загрузка фрагмента…' : '// Здесь будет отображаться кодовый фрагмент')}
 						onMount={(editor, monaco) => {
 							editorRef.current = editor;
 							monacoRef.current = monaco;
+							setEditorReady(true);
 						}}
 						options={{
 							readOnly: true,
 							minimap: { enabled: false },
 							scrollBeyondLastLine: false,
 							fontSize: 12,
-							lineNumbers: 'on',
+							lineNumbers: (line) => snippetLineNumber(line, snippet),
 							wordWrap: 'off',
 							padding: { top: 10, bottom: 10 },
 						}}
@@ -522,6 +570,10 @@ export function App() {
 					/>
 				</div>
 			</main>
+			{settingsOpen && <ApiSettingsDialog onIndexesReset={onIndexesReset} onClose={() => setSettingsOpen(false)} onSaved={() => {
+				setHasKey(true);
+				setSettingsError(false);
+			}} />}
 		</div>
 	);
 }

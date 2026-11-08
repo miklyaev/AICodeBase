@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, HttpException, Injectable, NotFoundException, Optional, ServiceUnavailableException } from '@nestjs/common';
+import { IndexLifecycleService } from './index-lifecycle.service';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { DatabaseService } from './database.service';
@@ -12,6 +13,7 @@ export class ProjectsService {
 	constructor(
 		private readonly db: DatabaseService,
 		private readonly lanceDbService: LanceDbService,
+		@Optional() private readonly lifecycle?: IndexLifecycleService,
 	) { }
 
 	selectProject(rawPath: string) {
@@ -66,7 +68,21 @@ export class ProjectsService {
 	}
 
 	async clearProjectIndex(projectId: string) {
+		const release = this.lifecycle?.acquire() ?? (() => undefined);
+		try {
+			await this.clearIndex(projectId);
+		} catch (error) {
+			if (error instanceof HttpException) throw error;
+			throw new ServiceUnavailableException({ code: 'INDEX_CLEAR_FAILED', message: 'Не удалось очистить индекс проекта. Администратору необходимо сбросить индексы всех проектов.' });
+		} finally {
+			release();
+		}
+	}
+
+	private async clearIndex(projectId: string) {
 		this.getProjectById(projectId);
+		this.lifecycle?.beginIndexCleanup();
+		await this.lanceDbService.clearProject(projectId);
 		this.db.transaction(() => {
 			this.db.run('DELETE FROM chunks WHERE projectId = ?', [projectId]);
 			this.db.run('DELETE FROM files WHERE projectId = ?', [projectId]);
@@ -75,8 +91,8 @@ export class ProjectsService {
 				new Date().toISOString(),
 				projectId,
 			]);
+			this.lifecycle?.completeIndexCleanup();
 		});
-		await this.lanceDbService.clearProject(projectId);
 	}
 
 	pickProjectFolderViaDialog(): string | null {

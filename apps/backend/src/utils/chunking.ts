@@ -24,10 +24,8 @@ const detectSymbol = (line: string): string | null => {
 };
 
 export function chunkText(content: string, maxLines = 80, overlap = 15): ChunkUnit[] {
+	if (!content.trim()) return [];
 	const lines = content.split(/\r?\n/);
-	if (!lines.length) {
-		return [];
-	}
 
 	const chunks: ChunkUnit[] = [];
 	let index = 0;
@@ -42,17 +40,20 @@ export function chunkText(content: string, maxLines = 80, overlap = 15): ChunkUn
 			symbol = detectSymbol(part[i]) ?? symbol;
 		}
 
-		chunks.push({
-			chunkIndex: index,
-			startLine: start + 1,
-			endLine: end,
-			content: part.join('\n'),
-			symbolName: symbol ?? '',
-		});
+		const text = part.join('\n');
+		if (text.trim()) {
+			chunks.push({
+				chunkIndex: index,
+				startLine: start + 1,
+				endLine: end,
+				content: text,
+				symbolName: symbol ?? '',
+			});
+			index += 1;
+		}
 
 		if (end >= lines.length) break;
 		start = Math.max(end - overlap, start + 1);
-		index += 1;
 	}
 
 	return chunks;

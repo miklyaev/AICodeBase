@@ -1,8 +1,8 @@
-import { Body, Controller, Get, Param, Post, Query, Sse, Headers } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Sse } from '@nestjs/common';
 import { map } from 'rxjs/operators';
 import { SelectProjectDto, IndexProjectDto } from '../dto/projects.dto';
 import { ProjectsService } from '../services/projects.service';
-import { IndexingService } from '../services/indexing.service';
+import { IndexingProgress, IndexingService } from '../services/indexing.service';
 import { ProgressEventsService } from '../services/progress-events.service';
 
 @Controller('/api/projects')
@@ -27,8 +27,8 @@ export class ProjectsController {
 	async indexProject(
 		@Body() dto: IndexProjectDto,
 	) {
-		void this.indexingService.indexProject(dto.projectId);
-		return { started: true };
+		this.projectsService.getProjectById(dto.projectId);
+		return this.indexingService.startIndexing(dto.projectId);
 	} @Post('/clear-index')
 	async clearIndex(@Body() dto: IndexProjectDto) {
 		await this.projectsService.clearProjectIndex(dto.projectId);
@@ -39,7 +39,9 @@ export class ProjectsController {
 	getStatus(@Param('projectId') projectId: string) {
 		const project = this.projectsService.getProjectById(projectId);
 		const stats = this.projectsService.getProjectStats(projectId);
-		const progress = this.indexingService.getProgress(projectId);
+		const progress: IndexingProgress = project.status === 'idle'
+			? { indexedFiles: 0, totalFiles: 0, message: 'Требуется индексация' }
+			: this.indexingService.getProgress(projectId);
 
 		return {
 			projectId,
@@ -49,6 +51,8 @@ export class ProjectsController {
 			indexedFiles: progress.indexedFiles,
 			totalFiles: progress.totalFiles,
 			message: progress.message,
+			...(progress.failure ? { failure: progress.failure } : {}),
+			...(progress.failedFiles ? { failedFiles: progress.failedFiles } : {}),
 		};
 	}
 

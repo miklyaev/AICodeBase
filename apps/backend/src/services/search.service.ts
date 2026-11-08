@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
+import { IndexLifecycleService } from './index-lifecycle.service';
 import { CodeReference } from '../types';
 import { DatabaseService } from './database.service';
-import { OpenRouterService } from './openrouter.service';
+import { LlmService } from './llm.service';
 import { ProjectsService } from './projects.service';
 import { LanceDbService } from './lancedb.service';
 
@@ -24,9 +25,10 @@ interface KeywordChunkRow {
 export class SearchService {
 	constructor(
 		private readonly db: DatabaseService,
-		private readonly openRouterService: OpenRouterService,
+		private readonly llmService: LlmService,
 		private readonly projectsService: ProjectsService,
 		private readonly lanceDbService: LanceDbService,
+		@Optional() private readonly lifecycle?: IndexLifecycleService,
 	) { }
 
 	private applyFilters(row: { relativePath: string; language: string }, filters: SearchFilters): boolean {
@@ -43,10 +45,20 @@ export class SearchService {
 		return true;
 	}
 
-	async search(projectId: string, query: string, topK = 8, apiKey?: string, filters?: SearchFilters): Promise<CodeReference[]> {
+	async search(projectId: string, query: string, topK = 8, filters?: SearchFilters): Promise<CodeReference[]> {
+		const release = this.lifecycle?.acquire() ?? (() => undefined);
+		try {
+			await this.lifecycle?.assertCompatible();
+			return await this.runSearch(projectId, query, topK, filters);
+		} finally {
+			release();
+		}
+	}
+
+	private async runSearch(projectId: string, query: string, topK: number, filters?: SearchFilters): Promise<CodeReference[]> {
 		this.projectsService.getProjectById(projectId);
 		const lowered = query.toLowerCase();
-		const queryVector = (await this.openRouterService.createEmbeddings([query], apiKey))[0] ?? [];
+		const queryVector = (await this.llmService.createEmbeddings([query]))[0] ?? [];
 		const vectorRows = await this.lanceDbService.vectorSearch(projectId, queryVector, topK);
 		const keywordRows = this.db.all<KeywordChunkRow>(
 			`SELECT relativePath, startLine, endLine, language, symbolName, content

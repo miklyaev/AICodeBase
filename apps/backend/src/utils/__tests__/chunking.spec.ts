@@ -1,12 +1,16 @@
 import { chunkText } from '../chunking';
 
 describe('chunkText', () => {
-	it('should return single chunk with empty content for empty string', () => {
-		const result = chunkText('');
-		expect(result).toHaveLength(1);
-		expect(result[0].content).toBe('');
+	it.each(['', ' ', '\t\r\n  \n'])('returns no chunks for empty or whitespace-only content %j', (content) => {
+		expect(chunkText(content)).toEqual([]);
+	});
+
+	it('omits blank windows while preserving source line numbers and contiguous chunk indices', () => {
+		const result = chunkText(['first', ...Array(160).fill(''), 'last'].join('\n'));
+		expect(result.every((chunk) => Boolean(chunk.content.trim()))).toBe(true);
+		expect(result.map((chunk) => chunk.chunkIndex)).toEqual(result.map((_chunk, index) => index));
 		expect(result[0].startLine).toBe(1);
-		expect(result[0].endLine).toBe(1);
+		expect(result[result.length - 1].endLine).toBe(162);
 	});
 
 	it('should return single chunk for short content', () => {
