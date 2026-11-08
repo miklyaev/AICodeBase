@@ -14,8 +14,7 @@
 			"vite/client"
 		],
 		"outDir": "dist",
-		"rootDir": "src",
-		"baseUrl": "."
+		"rootDir": "src"
 	},
 	"include": [
 		"src"

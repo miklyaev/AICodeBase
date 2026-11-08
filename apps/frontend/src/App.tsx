@@ -351,7 +351,9 @@ export function App() {
 			<aside className="left-panel">
 				<header className="card">
 					<h1>AI Codebase RAG Agent</h1>
-					<p className="muted">Помогает исследовать исходный код проектов</p>
+					<p className="muted app-description">
+						Помогает исследовать исходный код проектов. Веб-приложение следует разворачивать локально, запускать backend и frontend. В файле .env задать настройки провайдера LLM моделей и задать API key. Как запустить локально смотри README.md
+					</p>
 					<nav className="row" aria-label="Настройки приложения">
 						<button type="button" className="ghost" onClick={() => setSettingsOpen(true)} aria-haspopup="dialog">
 							Настройка API
