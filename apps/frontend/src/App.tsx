@@ -352,7 +352,7 @@ export function App() {
 				<header className="card">
 					<h1>AI Codebase RAG Agent</h1>
 					<p className="muted app-description">
-						Помогает исследовать исходный код проектов. Веб-приложение следует разворачивать локально, запускать backend и frontend. В файле .env задать настройки провайдера LLM моделей и задать API key. Как запустить локально смотри README.md
+						Помогает исследовать исходный код проектов. Веб-приложение следует разворачивать локально, запускать backend и frontend. Ссылка на github для скачивания <a href="https://github.com/miklyaev/AICodeBase" target="_blank" rel="noreferrer">https://github.com/miklyaev/AICodeBase</a>. В файле .env задать настройки провайдера LLM моделей и задать API key. Как запустить локально смотри README.md
 					</p>
 					<nav className="row" aria-label="Настройки приложения">
 						<button type="button" className="ghost" onClick={() => setSettingsOpen(true)} aria-haspopup="dialog">
